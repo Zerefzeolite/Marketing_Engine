@@ -1,0 +1,254 @@
+{
+  "profile": "growth",
+  "description": "20-campaign growth profile for 10k contact scale with error and warning alerts",
+  "campaigns": [
+    {
+      "campaign_id": "CMP-GROWTH-001",
+      "delivery": { "sent": 800, "delivered": 760, "failed": 40 },
+      "interactions": { "opens": 450, "clicks": 180, "replies": 25, "opt_outs": 12 },
+      "channels": {
+        "email": { "sent": 500, "delivered": 480, "opens": 320, "clicks": 120 },
+        "sms": { "sent": 200, "delivered": 190, "opens": 100, "clicks": 45 },
+        "social": { "sent": 100, "delivered": 90, "opens": 30, "clicks": 15 }
+      },
+      "costs": { "spend": 520.0, "revenue": 2100.0, "roi": 303.85, "cost_per_contact": 0.65, "cost_per_conversion": 13.0 },
+      "time_window": { "start": "2026-04-01", "end": "2026-04-07" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-002",
+      "delivery": { "sent": 700, "delivered": 665, "failed": 35 },
+      "interactions": { "opens": 380, "clicks": 150, "replies": 18, "opt_outs": 10 },
+      "channels": {
+        "email": { "sent": 450, "delivered": 430, "opens": 280, "clicks": 100 },
+        "sms": { "sent": 175, "delivered": 165, "opens": 75, "clicks": 38 },
+        "social": { "sent": 75, "delivered": 70, "opens": 25, "clicks": 12 }
+      },
+      "costs": { "spend": 450.0, "revenue": 1650.0, "roi": 266.67, "cost_per_contact": 0.643, "cost_per_conversion": 15.0 },
+      "time_window": { "start": "2026-04-01", "end": "2026-04-07" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-003",
+      "delivery": { "sent": 600, "delivered": 285, "failed": 315 },
+      "interactions": { "opens": 140, "clicks": 45, "replies": 5, "opt_outs": 8 },
+      "channels": {
+        "email": { "sent": 400, "delivered": 190, "opens": 100, "clicks": 30 },
+        "sms": { "sent": 150, "delivered": 70, "opens": 30, "clicks": 10 },
+        "social": { "sent": 50, "delivered": 25, "opens": 10, "clicks": 5 }
+      },
+      "costs": { "spend": 280.0, "revenue": 420.0, "roi": 50.0, "cost_per_contact": 0.467, "cost_per_conversion": 28.0 },
+      "time_window": { "start": "2026-04-02", "end": "2026-04-08" },
+      "alert_trigger": "delivery_rate_low"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-004",
+      "delivery": { "sent": 650, "delivered": 620, "failed": 30 },
+      "interactions": { "opens": 360, "clicks": 140, "replies": 20, "opt_outs": 45 },
+      "channels": {
+        "email": { "sent": 420, "delivered": 400, "opens": 260, "clicks": 95 },
+        "sms": { "sent": 160, "delivered": 155, "opens": 70, "clicks": 32 },
+        "social": { "sent": 70, "delivered": 65, "opens": 30, "clicks": 13 }
+      },
+      "costs": { "spend": 410.0, "revenue": 1500.0, "roi": 265.85, "cost_per_contact": 0.631, "cost_per_conversion": 12.81 },
+      "time_window": { "start": "2026-04-03", "end": "2026-04-09" },
+      "alert_trigger": "opt_out_rate_high"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-005",
+      "delivery": { "sent": 550, "delivered": 520, "failed": 30 },
+      "interactions": { "opens": 300, "clicks": 120, "replies": 15, "opt_outs": 8 },
+      "channels": {
+        "email": { "sent": 350, "delivered": 335, "opens": 220, "clicks": 80 },
+        "sms": { "sent": 140, "delivered": 130, "opens": 60, "clicks": 28 },
+        "social": { "sent": 60, "delivered": 55, "opens": 20, "clicks": 12 }
+      },
+      "costs": { "spend": 340.0, "revenue": 1100.0, "roi": 223.53, "cost_per_contact": 0.618, "cost_per_conversion": 15.0 },
+      "time_window": { "start": "2026-04-04", "end": "2026-04-10" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-006",
+      "delivery": { "sent": 500, "delivered": 230, "failed": 270 },
+      "interactions": { "opens": 120, "clicks": 40, "replies": 3, "opt_outs": 5 },
+      "channels": {
+        "email": { "sent": 350, "delivered": 160, "opens": 85, "clicks": 28 },
+        "sms": { "sent": 100, "delivered": 50, "opens": 25, "clicks": 8 },
+        "social": { "sent": 50, "delivered": 20, "opens": 10, "clicks": 4 }
+      },
+      "costs": { "spend": 180.0, "revenue": 150.0, "roi": -16.67, "cost_per_contact": 0.36, "cost_per_conversion": 30.0 },
+      "time_window": { "start": "2026-04-05", "end": "2026-04-11" },
+      "alert_trigger": "delivery_rate_low"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-007",
+      "delivery": { "sent": 580, "delivered": 550, "failed": 30 },
+      "interactions": { "opens": 320, "clicks": 130, "replies": 18, "opt_outs": 38 },
+      "channels": {
+        "email": { "sent": 380, "delivered": 360, "opens": 240, "clicks": 90 },
+        "sms": { "sent": 140, "delivered": 135, "opens": 55, "clicks": 28 },
+        "social": { "sent": 60, "delivered": 55, "opens": 25, "clicks": 12 }
+      },
+      "costs": { "spend": 365.0, "revenue": 1280.0, "roi": 250.68, "cost_per_contact": 0.629, "cost_per_conversion": 13.519 },
+      "time_window": { "start": "2026-04-06", "end": "2026-04-12" },
+      "alert_trigger": "opt_out_rate_high"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-008",
+      "delivery": { "sent": 620, "delivered": 590, "failed": 30 },
+      "interactions": { "opens": 340, "clicks": 135, "replies": 16, "opt_outs": 10 },
+      "channels": {
+        "email": { "sent": 400, "delivered": 380, "opens": 250, "clicks": 92 },
+        "sms": { "sent": 155, "delivered": 148, "opens": 65, "clicks": 30 },
+        "social": { "sent": 65, "delivered": 62, "opens": 25, "clicks": 13 }
+      },
+      "costs": { "spend": 390.0, "revenue": 1350.0, "roi": 246.15, "cost_per_contact": 0.629, "cost_per_conversion": 15.0 },
+      "time_window": { "start": "2026-04-07", "end": "2026-04-13" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-009",
+      "delivery": { "sent": 700, "delivered": 665, "failed": 35 },
+      "interactions": { "opens": 400, "clicks": 160, "replies": 22, "opt_outs": 50 },
+      "channels": {
+        "email": { "sent": 450, "delivered": 430, "opens": 290, "clicks": 110 },
+        "sms": { "sent": 175, "delivered": 165, "opens": 80, "clicks": 35 },
+        "social": { "sent": 75, "delivered": 70, "opens": 30, "clicks": 15 }
+      },
+      "costs": { "spend": 440.0, "revenue": 1750.0, "roi": 297.73, "cost_per_contact": 0.629, "cost_per_conversion": 12.5 },
+      "time_window": { "start": "2026-04-08", "end": "2026-04-14" },
+      "alert_trigger": "opt_out_rate_high"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-010",
+      "delivery": { "sent": 480, "delivered": 455, "failed": 25 },
+      "interactions": { "opens": 270, "clicks": 105, "replies": 12, "opt_outs": 6 },
+      "channels": {
+        "email": { "sent": 320, "delivered": 305, "opens": 200, "clicks": 72 },
+        "sms": { "sent": 110, "delivered": 105, "opens": 50, "clicks": 23 },
+        "social": { "sent": 50, "delivered": 45, "opens": 20, "clicks": 10 }
+      },
+      "costs": { "spend": 300.0, "revenue": 950.0, "roi": 216.67, "cost_per_contact": 0.625, "cost_per_conversion": 15.0 },
+      "time_window": { "start": "2026-04-09", "end": "2026-04-15" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-011",
+      "delivery": { "sent": 520, "delivered": 490, "failed": 30 },
+      "interactions": { "opens": 280, "clicks": 110, "replies": 14, "opt_outs": 32 },
+      "channels": {
+        "email": { "sent": 340, "delivered": 320, "opens": 210, "clicks": 75 },
+        "sms": { "sent": 125, "delivered": 120, "opens": 50, "clicks": 25 },
+        "social": { "sent": 55, "delivered": 50, "opens": 20, "clicks": 10 }
+      },
+      "costs": { "spend": 325.0, "revenue": 1050.0, "roi": 223.08, "cost_per_contact": 0.625, "cost_per_conversion": 14.773 },
+      "time_window": { "start": "2026-04-10", "end": "2026-04-16" },
+      "alert_trigger": "opt_out_rate_high"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-012",
+      "delivery": { "sent": 450, "delivered": 425, "failed": 25 },
+      "interactions": { "opens": 250, "clicks": 100, "replies": 10, "opt_outs": 5 },
+      "channels": {
+        "email": { "sent": 300, "delivered": 285, "opens": 185, "clicks": 68 },
+        "sms": { "sent": 100, "delivered": 95, "opens": 45, "clicks": 22 },
+        "social": { "sent": 50, "delivered": 45, "opens": 20, "clicks": 10 }
+      },
+      "costs": { "spend": 280.0, "revenue": 800.0, "roi": 185.71, "cost_per_contact": 0.622, "cost_per_conversion": 17.5 },
+      "time_window": { "start": "2026-04-11", "end": "2026-04-17" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-013",
+      "delivery": { "sent": 680, "delivered": 640, "failed": 40 },
+      "interactions": { "opens": 380, "clicks": 150, "replies": 20, "opt_outs": 12 },
+      "channels": {
+        "email": { "sent": 440, "delivered": 415, "opens": 280, "clicks": 102 },
+        "sms": { "sent": 170, "delivered": 160, "opens": 70, "clicks": 35 },
+        "social": { "sent": 70, "delivered": 65, "opens": 30, "clicks": 13 }
+      },
+      "costs": { "spend": 425.0, "revenue": 1600.0, "roi": 276.47, "cost_per_contact": 0.625, "cost_per_conversion": 13.281 },
+      "time_window": { "start": "2026-04-12", "end": "2026-04-18" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-014",
+      "delivery": { "sent": 350, "delivered": 160, "failed": 190 },
+      "interactions": { "opens": 85, "clicks": 25, "replies": 2, "opt_outs": 4 },
+      "channels": {
+        "email": { "sent": 250, "delivered": 115, "opens": 60, "clicks": 18 },
+        "sms": { "sent": 70, "delivered": 32, "opens": 15, "clicks": 5 },
+        "social": { "sent": 30, "delivered": 13, "opens": 10, "clicks": 2 }
+      },
+      "costs": { "spend": 120.0, "revenue": 80.0, "roi": -33.33, "cost_per_contact": 0.343, "cost_per_conversion": 30.0 },
+      "time_window": { "start": "2026-04-13", "end": "2026-04-19" },
+      "alert_trigger": "delivery_rate_low"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-015",
+      "delivery": { "sent": 420, "delivered": 400, "failed": 20 },
+      "interactions": { "opens": 230, "clicks": 95, "replies": 8, "opt_outs": 6 },
+      "channels": {
+        "email": { "sent": 280, "delivered": 265, "opens": 175, "clicks": 65 },
+        "sms": { "sent": 95, "delivered": 90, "opens": 40, "clicks": 20 },
+        "social": { "sent": 45, "delivered": 45, "opens": 15, "clicks": 10 }
+      },
+      "costs": { "spend": 265.0, "revenue": 780.0, "roi": 194.34, "cost_per_contact": 0.631, "cost_per_conversion": 19.643 },
+      "time_window": { "start": "2026-04-14", "end": "2026-04-20" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-016",
+      "delivery": { "sent": 580, "delivered": 545, "failed": 35 },
+      "interactions": { "opens": 320, "clicks": 125, "replies": 16, "opt_outs": 35 },
+      "channels": {
+        "email": { "sent": 380, "delivered": 355, "opens": 235, "clicks": 85 },
+        "sms": { "sent": 140, "delivered": 135, "opens": 60, "clicks": 28 },
+        "social": { "sent": 60, "delivered": 55, "opens": 25, "clicks": 12 }
+      },
+      "costs": { "spend": 360.0, "revenue": 1180.0, "roi": 227.78, "cost_per_contact": 0.621, "cost_per_conversion": 14.4 },
+      "time_window": { "start": "2026-04-15", "end": "2026-04-21" },
+      "alert_trigger": "opt_out_rate_high"
+    },
+    {
+      "campaign_id": "CMP-GROWTH-017",
+      "delivery": { "sent": 650, "delivered": 620, "failed": 30 },
+      "interactions": { "opens": 360, "clicks": 145, "replies": 18, "opt_outs": 8 },
+      "channels": {
+        "email": { "sent": 420, "delivered": 400, "opens": 265, "clicks": 100 },
+        "sms": { "sent": 165, "delivered": 155, "opens": 70, "clicks": 32 },
+        "social": { "sent": 65, "delivered": 65, "opens": 25, "clicks": 13 }
+      },
+      "costs": { "spend": 410.0, "revenue": 1500.0, "roi": 265.85, "cost_per_contact": 0.631, "cost_per_conversion": 14.286 },
+      "time_window": { "start": "2026-04-16", "end": "2026-04-22" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-018",
+      "delivery": { "sent": 550, "delivered": 520, "failed": 30 },
+      "interactions": { "opens": 300, "clicks": 120, "replies": 14, "opt_outs": 7 },
+      "channels": {
+        "email": { "sent": 360, "delivered": 340, "opens": 225, "clicks": 82 },
+        "sms": { "sent": 130, "delivered": 125, "opens": 55, "clicks": 27 },
+        "social": { "sent": 60, "delivered": 55, "opens": 20, "clicks": 11 }
+      },
+      "costs": { "spend": 345.0, "revenue": 1100.0, "roi": 218.84, "cost_per_contact": 0.627, "cost_per_conversion": 15.0 },
+      "time_window": { "start": "2026-04-17", "end": "2026-04-23" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-019",
+      "delivery": { "sent": 750, "delivered": 710, "failed": 40 },
+      "interactions": { "opens": 420, "clicks": 170, "replies": 24, "opt_outs": 15 },
+      "channels": {
+        "email": { "sent": 480, "delivered": 455, "opens": 310, "clicks": 115 },
+        "sms": { "sent": 190, "delivered": 180, "opens": 80, "clicks": 40 },
+        "social": { "sent": 80, "delivered": 75, "opens": 30, "clicks": 15 }
+      },
+      "costs": { "spend": 470.0, "revenue": 2000.0, "roi": 325.53, "cost_per_contact": 0.627, "cost_per_conversion": 12.159 },
+      "time_window": { "start": "2026-04-18", "end": "2026-04-24" }
+    },
+    {
+      "campaign_id": "CMP-GROWTH-020",
+      "delivery": { "sent": 680, "delivered": 645, "failed": 35 },
+      "interactions": { "opens": 380, "clicks": 155, "replies": 20, "opt_outs": 10 },
+      "channels": {
+        "email": { "sent": 440, "delivered": 420, "opens": 280, "clicks": 105 },
+        "sms": { "sent": 170, "delivered": 160, "opens": 70, "clicks": 35 },
+        "social": { "sent": 70, "delivered": 65, "opens": 30, "clicks": 15 }
+      },
+      "costs": { "spend": 425.0, "revenue": 1650.0, "roi": 288.24, "cost_per_contact": 0.625, "cost_per_conversion": 13.281 },
+      "time_window": { "start": "2026-04-19", "end": "2026-04-25" }
+    }
+  ]
+}
