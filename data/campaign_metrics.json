@@ -1,0 +1,228 @@
+{
+  "CMP-PILOT-001": {
+    "campaign_id": "CMP-PILOT-001",
+    "delivery": {
+      "sent": 500,
+      "delivered": 470,
+      "failed": 30
+    },
+    "interactions": {
+      "opens": 280,
+      "clicks": 95,
+      "replies": 12,
+      "opt_outs": 8
+    },
+    "channels": {
+      "email": {
+        "sent": 350,
+        "delivered": 335,
+        "opens": 220,
+        "clicks": 70
+      },
+      "sms": {
+        "sent": 100,
+        "delivered": 95,
+        "opens": 45,
+        "clicks": 18
+      },
+      "social": {
+        "sent": 50,
+        "delivered": 40,
+        "opens": 15,
+        "clicks": 7
+      }
+    },
+    "costs": {
+      "spend": 350.0,
+      "revenue": 1050.0,
+      "roi": 200.0,
+      "cost_per_contact": 0.7,
+      "cost_per_conversion": 14.58
+    },
+    "time_window": {
+      "start": "2026-04-01",
+      "end": "2026-04-30"
+    }
+  },
+  "CMP-PILOT-002": {
+    "campaign_id": "CMP-PILOT-002",
+    "delivery": {
+      "sent": 300,
+      "delivered": 285,
+      "failed": 15
+    },
+    "interactions": {
+      "opens": 160,
+      "clicks": 50,
+      "replies": 5,
+      "opt_outs": 3
+    },
+    "channels": {
+      "email": {
+        "sent": 200,
+        "delivered": 190,
+        "opens": 120,
+        "clicks": 35
+      },
+      "sms": {
+        "sent": 75,
+        "delivered": 72,
+        "opens": 30,
+        "clicks": 12
+      },
+      "social": {
+        "sent": 25,
+        "delivered": 23,
+        "opens": 10,
+        "clicks": 3
+      }
+    },
+    "costs": {
+      "spend": 180.0,
+      "revenue": 420.0,
+      "roi": 133.33,
+      "cost_per_contact": 0.6,
+      "cost_per_conversion": 18.0
+    },
+    "time_window": {
+      "start": "2026-04-05",
+      "end": "2026-04-30"
+    }
+  },
+  "CMP-PILOT-003": {
+    "campaign_id": "CMP-PILOT-003",
+    "delivery": {
+      "sent": 200,
+      "delivered": 170,
+      "failed": 30
+    },
+    "interactions": {
+      "opens": 85,
+      "clicks": 22,
+      "replies": 2,
+      "opt_outs": 12
+    },
+    "channels": {
+      "email": {
+        "sent": 120,
+        "delivered": 105,
+        "opens": 55,
+        "clicks": 14
+      },
+      "sms": {
+        "sent": 50,
+        "delivered": 45,
+        "opens": 20,
+        "clicks": 5
+      },
+      "social": {
+        "sent": 30,
+        "delivered": 20,
+        "opens": 10,
+        "clicks": 3
+      }
+    },
+    "costs": {
+      "spend": 95.0,
+      "revenue": 180.0,
+      "roi": 89.47,
+      "cost_per_contact": 0.475,
+      "cost_per_conversion": 23.75
+    },
+    "time_window": {
+      "start": "2026-04-10",
+      "end": "2026-04-30"
+    },
+    "alert_trigger": "delivery_rate_low"
+  },
+  "CMP-PILOT-004": {
+    "campaign_id": "CMP-PILOT-004",
+    "delivery": {
+      "sent": 150,
+      "delivered": 145,
+      "failed": 5
+    },
+    "interactions": {
+      "opens": 90,
+      "clicks": 35,
+      "replies": 4,
+      "opt_outs": 1
+    },
+    "channels": {
+      "email": {
+        "sent": 100,
+        "delivered": 97,
+        "opens": 65,
+        "clicks": 25
+      },
+      "sms": {
+        "sent": 35,
+        "delivered": 34,
+        "opens": 18,
+        "clicks": 8
+      },
+      "social": {
+        "sent": 15,
+        "delivered": 14,
+        "opens": 7,
+        "clicks": 2
+      }
+    },
+    "costs": {
+      "spend": 85.0,
+      "revenue": 320.0,
+      "roi": 276.47,
+      "cost_per_contact": 0.5667,
+      "cost_per_conversion": 10.625
+    },
+    "time_window": {
+      "start": "2026-04-15",
+      "end": "2026-04-30"
+    }
+  },
+  "CMP-PILOT-005": {
+    "campaign_id": "CMP-PILOT-005",
+    "delivery": {
+      "sent": 100,
+      "delivered": 98,
+      "failed": 2
+    },
+    "interactions": {
+      "opens": 60,
+      "clicks": 20,
+      "replies": 3,
+      "opt_outs": 0
+    },
+    "channels": {
+      "email": {
+        "sent": 70,
+        "delivered": 68,
+        "opens": 45,
+        "clicks": 14
+      },
+      "sms": {
+        "sent": 20,
+        "delivered": 20,
+        "opens": 12,
+        "clicks": 5
+      },
+      "social": {
+        "sent": 10,
+        "delivered": 10,
+        "opens": 3,
+        "clicks": 1
+      }
+    },
+    "costs": {
+      "spend": 55.0,
+      "revenue": 220.0,
+      "roi": 300.0,
+      "cost_per_contact": 0.55,
+      "cost_per_conversion": 11.0
+    },
+    "time_window": {
+      "start": "2026-04-20",
+      "end": "2026-04-30"
+    }
+  }
+}
