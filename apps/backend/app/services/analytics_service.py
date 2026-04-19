@@ -3,15 +3,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-def _get_data_dir() -> Path:
-    cwd = Path.cwd()
-    for _ in range(5):
-        if (cwd / "data").exists():
-            return cwd / "data"
-        cwd = cwd.parent
-    return Path("data")
-
-DATA_DIR = _get_data_dir()
+# File: app/services/analytics_service.py
+# Go up: services -> app -> backend -> Marketing_Engine -> data
+SERVICE_FILE = Path(__file__).resolve()
+DATA_DIR = SERVICE_FILE.parent.parent.parent.parent.parent / "data"
 
 METRICS_STORAGE_FILE = DATA_DIR / "campaign_metrics.json"
 CONTACT_INTERACTIONS_FILE = DATA_DIR / "contact_interactions.json"

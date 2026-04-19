@@ -3,15 +3,9 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-def _get_data_dir() -> Path:
-    cwd = Path.cwd()
-    for _ in range(5):
-        if (cwd / "data").exists():
-            return cwd / "data"
-        cwd = cwd.parent
-    return Path("data")
+SERVICE_FILE = Path(__file__).resolve()
+DATA_DIR = SERVICE_FILE.parent.parent.parent.parent.parent / "data"
 
-DATA_DIR = _get_data_dir()
 SCHEDULER_FILE = DATA_DIR / "campaign_schedules.json"
 
 
