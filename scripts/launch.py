@@ -2,92 +2,59 @@
 """
 Marketing Engine Launcher
 
-Starts both backend and frontend servers for development/testing.
+Run this to seed data and get instructions for starting the app.
 """
 import subprocess
 import sys
-import time
-import webbrowser
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
-BACKEND_DIR = PROJECT_ROOT / "apps" / "backend"
-FRONTEND_DIR = PROJECT_ROOT / "apps" / "frontend"
-
-
-def print_status(msg: str) -> None:
-    print(f"[launcher] {msg}")
 
 
 def main():
-    print_status("Marketing Engine Launcher")
-    print("=" * 40)
+    print("=" * 50)
+    print("Marketing Engine - Quick Start")
+    print("=" * 50)
+    print()
 
-    # Seed data first
-    print_status("Seeding analytics data...")
-    seed_result = subprocess.run(
-        [sys.executable, "scripts/seed_phase13_analytics.py", "--profile", "pilot", "--reset"],
-        cwd=PROJECT_ROOT,
+    # Seed data
+    print("[1/3] Seeding analytics data...")
+    seed_script = PROJECT_ROOT / "scripts" / "seed_phase13_analytics.py"
+    result = subprocess.run(
+        [sys.executable, str(seed_script), "--profile", "pilot", "--reset"],
         capture_output=True,
     )
-    if seed_result.returncode == 0:
-        print_status("Analytics data seeded")
+    if result.returncode == 0:
+        print("       Done!")
     else:
-        print_status(f"Seed warning: {seed_result.stderr.decode()}")
+        print(f"       Warning: {result.stderr.decode()[:100]}")
 
-    # Start backend
-    print_status("Starting backend (port 8000)...")
-    backend = subprocess.Popen(
-        ["uvicorn", "app.main:app", "--reload", "--port", "8000"],
-        cwd=BACKEND_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    # Start frontend
-    print_status("Starting frontend (port 3000)...")
-    frontend = subprocess.Popen(
-        ["pnpm", "dev"],
-        cwd=FRONTEND_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    # Wait for servers
-    print_status("Waiting for servers to start...")
-    time.sleep(5)
-
-    print("=" * 40)
-    print_status("Servers running!")
-    print("")
-    print("Endpoints:")
-    print("  Frontend: http://localhost:3000")
-    print("  Backend: http://localhost:8000")
-    print("  API Docs: http://localhost:8000/docs")
-    print("")
-    print("Pages to test:")
+    print()
+    print("[2/3] Starting backend...")
+    print("       Command: cd apps/backend && uvicorn app.main:app --reload --port 8000")
+    print()
+    print("[3/3] Starting frontend...")
+    print("       Command: cd apps/frontend && pnpm dev")
+    print()
+    print("=" * 50)
+    print("ENDPOINTS TO TEST")
+    print("=" * 50)
+    print()
+    print("Frontend Pages:")
     print("  http://localhost:3000/analytics")
     print("  http://localhost:3000/quality-gate")
     print("  http://localhost:3000/campaign-execute?requestId=CMP-PILOT-001")
-    print("")
-    print("Press Ctrl+C to stop servers")
-
-    # Open browser
-    try:
-        webbrowser.open("http://localhost:3000/analytics")
-    except:
-        pass
-
-    try:
-        backend.wait()
-    except KeyboardInterrupt:
-        print_status("Stopping servers...")
-        backend.terminate()
-        frontend.terminate()
-        backend.wait()
-        frontend.wait()
-        print_status("Servers stopped")
-        sys.exit(0)
+    print()
+    print("API Endpoints (see http://localhost:8000/docs for all):")
+    print("  GET  /api/campaigns/aggregated     # Analytics data")
+    print("  GET  /api/campaigns/scheduled     # Scheduled campaigns")
+    print("  POST /api/campaigns/{id}/schedule # Schedule campaign")
+    print("  POST /api/campaigns/{id}/execute  # Execute campaign")
+    print("  GET  /api/campaigns/executions    # Execution history")
+    print("  GET  /api/contacts               # Contact list")
+    print("  POST /api/contacts/import        # Import contacts")
+    print("  GET  /api/notifications          # Notification log")
+    print()
 
 
 if __name__ == "__main__":
