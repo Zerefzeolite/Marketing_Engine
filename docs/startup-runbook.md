@@ -53,6 +53,14 @@ npm run dev
 | `pilot` | 5 | ~500 |
 | `growth` | 20 | ~10k |
 
+## Implemented Phases
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 13 | Live Analytics Data | ✅ |
+| 14 | Campaign Scheduling | ✅ |
+| 15 | Quality Gate UI | ✅ |
+
 ## Common Tasks
 
 ### Reset Analytics Data
@@ -60,10 +68,19 @@ npm run dev
 python scripts/seed_phase13_analytics.py --profile pilot --reset
 ```
 
-### View Current Metrics
+### Schedule a Campaign
 ```bash
-cat data/campaign_metrics.json
+curl -X PATCH http://localhost:8000/api/campaigns/{id}/schedule \
+  -H "Content-Type: application/json" \
+  -d '{"scheduled_at": "2026-04-20T14:00:00Z", "timezone": "UTC"}'
 ```
 
-### Add New Campaign
-POST to `/api/campaigns` with campaign config.
+### View Scheduled Campaigns
+```bash
+curl http://localhost:8000/api/campaigns/scheduled
+```
+
+### View Execution History
+```bash
+curl http://localhost:8000/api/campaigns/executions
+```
