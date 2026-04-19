@@ -1,0 +1,8 @@
+{
+  "CMP-PILOT-001": {
+    "campaign_id": "CMP-PILOT-001",
+    "scheduled_at": "2026-04-20T14:00:00+00:00",
+    "timezone": "UTC",
+    "status": "scheduled"
+  }
+}
