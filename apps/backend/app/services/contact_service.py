@@ -3,7 +3,16 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-CONTACTS_FILE = Path("data/contacts.json")
+def _get_data_dir() -> Path:
+    cwd = Path.cwd()
+    for _ in range(5):
+        if (cwd / "data").exists():
+            return cwd / "data"
+        cwd = cwd.parent
+    return Path("data")
+
+DATA_DIR = _get_data_dir()
+CONTACTS_FILE = DATA_DIR / "contacts.json"
 
 
 def _load_contacts() -> dict:

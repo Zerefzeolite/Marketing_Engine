@@ -3,7 +3,16 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-EXECUTION_FILE = Path("data/execution_history.json")
+def _get_data_dir() -> Path:
+    cwd = Path.cwd()
+    for _ in range(5):
+        if (cwd / "data").exists():
+            return cwd / "data"
+        cwd = cwd.parent
+    return Path("data")
+
+DATA_DIR = _get_data_dir()
+EXECUTION_FILE = DATA_DIR / "execution_history.json"
 
 
 def _load_executions() -> dict:

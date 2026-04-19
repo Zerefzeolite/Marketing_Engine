@@ -3,7 +3,16 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-NOTIFICATIONS_FILE = Path("data/notifications.json")
+def _get_data_dir() -> Path:
+    cwd = Path.cwd()
+    for _ in range(5):
+        if (cwd / "data").exists():
+            return cwd / "data"
+        cwd = cwd.parent
+    return Path("data")
+
+DATA_DIR = _get_data_dir()
+NOTIFICATIONS_FILE = DATA_DIR / "notifications.json"
 
 
 def _load_notifications() -> dict:
