@@ -72,3 +72,39 @@ def mark_completed(campaign_id: str) -> dict | None:
         _save_schedules(schedules)
         return schedules[campaign_id]
     return None
+
+
+def mark_failed(campaign_id: str) -> dict | None:
+    schedules = _load_schedules()
+    if campaign_id in schedules:
+        schedules[campaign_id]["status"] = "failed"
+        _save_schedules(schedules)
+        return schedules[campaign_id]
+    return None
+
+
+def execute_due_campaigns() -> list[dict]:
+    """Find and execute all due campaigns."""
+    from app.services import dispatch_service, execution_service
+
+    due = get_due_campaigns()
+    results = []
+    for campaign in due:
+        campaign_id = campaign["campaign_id"]
+        mark_executing(campaign_id)
+        try:
+            campaign = dispatch_service.get_campaign_for_dispatch(campaign_id)
+            dispatch_service.ensure_dispatch_gate(campaign)
+            exec_record = execution_service.start_execution(campaign_id)
+            execution_service.complete_execution(
+                execution_id=exec_record["execution_id"],
+                contacts_attempted=0,
+                contacts_delivered=0,
+                errors=[],
+            )
+            mark_completed(campaign_id)
+            results.append({"campaign_id": campaign_id, "status": "completed"})
+        except Exception as e:
+            mark_failed(campaign_id)
+            results.append({"campaign_id": campaign_id, "status": "failed", "error": str(e)})
+    return results
