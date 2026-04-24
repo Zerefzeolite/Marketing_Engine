@@ -91,6 +91,52 @@ export const QUALITY_WEIGHTS = {
 
 export const PREMIUM_QUALITY_MULTIPLIER = 1.25
 
+export interface ContactChannelInfo {
+  email_only: number
+  phone_only: number
+  hybrid: number
+}
+
+export function calculateChannelCosts(
+  totalContacts: number,
+  channelSplit: string,
+  contactTypes: ContactChannelInfo
+) {
+  const EMAIL_COST = 0.008
+  const SMS_COST = 0.025
+
+  if (!channelSplit.includes("both")) {
+    return {
+      cost: totalContacts * (channelSplit.includes("sms") ? SMS_COST : EMAIL_COST),
+      breakdown: channelSplit,
+    }
+  }
+
+  const cost = (
+    contactTypes.hybrid * EMAIL_COST +
+    contactTypes.email_only * EMAIL_COST +
+    contactTypes.phone_only * SMS_COST
+  )
+
+  const emailCount = contactTypes.email_only + Math.round(contactTypes.hybrid * 0.7)
+  const smsCount = contactTypes.phone_only + Math.round(contactTypes.hybrid * 0.3)
+
+  return {
+    cost,
+    breakdown: `${emailCount} email, ${smsCount} SMS`,
+    routingNote: "Smart routing - one message per contact",
+  }
+}
+
+export function getChannelLabel(channel: string): string {
+  const labels: Record<string, string> = {
+    email: "Email (100%)",
+    sms: "SMS (100%)",
+    both: "Email + SMS (Smart Routing)",
+  }
+  return labels[channel] || labels.email
+}
+
 export function calculatePremiumPrice(
   standardPrice: number,
   hasQualityData: boolean
