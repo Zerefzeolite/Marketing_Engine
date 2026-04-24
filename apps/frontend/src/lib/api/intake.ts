@@ -83,6 +83,46 @@ export const PACKAGE_TIERS = {
   },
 }
 
+export const QUALITY_WEIGHTS = {
+  standard: 1.0,
+  responsive: 1.3,
+  high_value: 1.6,
+}
+
+export const PREMIUM_QUALITY_MULTIPLIER = 1.25
+
+export function calculatePremiumPrice(
+  standardPrice: number,
+  hasQualityData: boolean
+) {
+  if (!hasQualityData) {
+    return standardPrice * PREMIUM_QUALITY_MULTIPLIER
+  }
+
+  return standardPrice * QUALITY_WEIGHTS.responsive
+}
+
+export function getQualityBreakdown(contacts: number): {
+  standard: number
+  responsive: number
+  highValue: number
+} {
+  return {
+    standard: contacts,
+    responsive: 0,
+    highValue: 0,
+  }
+}
+
+export function getPackageDescription(tier: string): string {
+  const descriptions: Record<string, string> = {
+    starter: "Sample size - ideal for testing",
+    growth: "Standard - budget aligned",
+    premium: "Best Fit - intelligent targeting",
+  }
+  return descriptions[tier] || descriptions.growth
+}
+
 function calculatePackagePricing(
   contactRange: number,
   channel: string,
