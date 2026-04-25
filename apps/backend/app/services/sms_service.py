@@ -13,6 +13,10 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
 
+# Trial mode: only send to your verified number
+# When upgrading Twilio, remove VERIFIED_PHONE restriction
+VERIFIED_PHONE = os.getenv("VERIFIED_PHONE", "+18763549375")  # Your number for testing
+
 BASE_URL = "https://api.twilio.com/2010-04-01"
 
 
@@ -35,15 +39,17 @@ class SMSService:
         Send an SMS via Twilio.
         Works with Jamaican numbers (+1 876 xxx xxxx).
         
-        Args:
-            to_number: Recipient phone number (E.164 format)
-            message: SMS text content
-            
-        Returns:
-            dict with status and message_sid
+        Trial mode: Only sends to VERIFIED_PHONE number.
         """
         if not self.enabled:
             return {"status": "mock", "message_sid": f"mock-{hash(to_number)}"}
+        
+        # Trial mode: restrict to verified number only
+        if VERIFIED_PHONE and to_number != VERIFIED_PHONE:
+            return {
+                "status": "trial_restricted",
+                "message": f"Trial mode: can only send to {VERIFIED_PHONE}. Upgrade to send to all numbers.",
+            }
         
         # Format phone number for Jamaica
         # Accept: +18761234567, 18761234567, 8761234567

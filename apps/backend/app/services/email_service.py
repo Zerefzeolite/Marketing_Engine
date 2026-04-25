@@ -1,12 +1,11 @@
 """
-Email Service - Brevo Integration
+Email Service - Brevo REST API Integration
 
-Provides email sending capabilities via Brevo (formerly Sendinblue) API.
+Provides email sending via Brevo Transactional API.
 Free tier: 300 emails/day
 """
 
 import os
-from typing import Optional
 import httpx
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
@@ -17,14 +16,17 @@ BASE_URL = "https://api.brevo.com/v3"
 
 
 class EmailService:
-    def __init__(self, api_key: str = None):
-        self.api_key = api_key or BREVO_API_KEY
+    def __init__(self):
+        self.api_key = BREVO_API_KEY
         self.enabled = bool(self.api_key)
+        self.sender_email = BREVO_SENDER_EMAIL
+        self.sender_name = BREVO_SENDER_NAME
     
     def _get_headers(self) -> dict:
         return {
             "api-key": self.api_key,
             "Content-Type": "application/json",
+            "Accept": "application/json",
         }
     
     async def send_email(
@@ -36,40 +38,26 @@ class EmailService:
         from_name: str = None,
     ) -> dict:
         """
-        Send an email via Brevo.
-        
-        Args:
-            to_email: Recipient email address
-            subject: Email subject line
-            html_content: HTML body content
-            from_email: Sender email (defaults to configured)
-            from_name: Sender name
-            
-        Returns:
-            dict with status and message_id
+        Send email via Brevo REST API.
         """
         if not self.enabled:
             return {"status": "mock", "message_id": f"mock-{hash(to_email)}"}
         
-        from_email = from_email or BREVO_SENDER_EMAIL
-        from_name = from_name or BREVO_SENDER_NAME
+        from_email = from_email or self.sender_email
+        from_name = from_name or self.sender_name
         
         payload = {
             "sender": {
                 "email": from_email,
                 "name": from_name,
             },
-            "to": [
-                {
-                    "email": to_email,
-                }
-            ],
+            "to": [{"email": to_email}],
             "subject": subject,
             "htmlContent": html_content,
         }
         
-        async with httpx.AsyncClient() as client:
-            try:
+        try:
+            async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{BASE_URL}/smtp/email",
                     json=payload,
@@ -77,7 +65,7 @@ class EmailService:
                     timeout=30.0,
                 )
                 
-                if response.status_code == 201:
+                if response.status_code in (200, 201):
                     data = response.json()
                     return {
                         "status": "sent",
@@ -86,13 +74,13 @@ class EmailService:
                 else:
                     return {
                         "status": "error",
-                        "error": f"Brevo error: {response.status_code} - {response.text}",
+                        "error": f"Brevo {response.status_code}: {response.text[:200]}",
                     }
-            except Exception as e:
-                return {
-                    "status": "error",
-                    "error": str(e),
-                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+            }
     
     async def send_campaign(
         self,
@@ -100,22 +88,7 @@ class EmailService:
         subject: str,
         html_content: str,
     ) -> dict:
-        """
-        Send to multiple recipients.
-        
-        Args:
-            recipients: List of email addresses
-            subject: Email subject
-            html_content: HTML body
-            
-        Returns:
-            dict with sent count and any errors
-        """
-        results = {
-            "sent": 0,
-            "failed": 0,
-            "errors": [],
-        }
+        results = {"sent": 0, "failed": 0, "errors": []}
         
         for email in recipients:
             result = await self.send_email(email, subject, html_content)
@@ -123,32 +96,9 @@ class EmailService:
                 results["sent"] += 1
             else:
                 results["failed"] += 1
-                results["errors"].append(result.get("error", "Unknown error"))
+                results["errors"].append(result.get("error", "Unknown"))
         
         return results
-    
-    async def get_credits(self) -> dict:
-        """Get remaining email credits"""
-        if not self.enabled:
-            return {"remaining": "unlimited (mock)"}
-        
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{BASE_URL}/account",
-                    headers=self._get_headers(),
-                    timeout=30.0,
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    return {
-                        "remaining": data.get("email", {}).get("remaining", "unknown"),
-                        "plan": data.get("plan", {}).get("name", "unknown"),
-                    }
-            except Exception:
-                pass
-        
-        return {"remaining": "unknown"}
 
 
 email_service = EmailService()
