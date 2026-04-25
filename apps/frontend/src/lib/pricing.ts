@@ -12,12 +12,12 @@
 
 export const PROVIDER_COSTS = {
   email: {
-    costPerMessage: 0.001,  // Mailchimp ~$0.001/email (free tier available)
-    provider: "Mailchimp",
+    costPerMessage: 0.003,  // Brevo ~$0.003/email (300/day free)
+    provider: "Brevo",
   },
   sms: {
-    costPerMessage: 0.005,  // Plivo ~$0.005/sms
-    provider: "Plivo",
+    costPerMessage: 0.0075,  // Twilio ~$0.0075/sms to Jamaica
+    provider: "Twilio",
   },
 } as const
 

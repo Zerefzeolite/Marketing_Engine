@@ -1,30 +1,29 @@
 """
-Email Service - Mailchimp Integration
+Email Service - Brevo Integration
 
-Provides email sending capabilities via Mailchimp Transactional API.
+Provides email sending capabilities via Brevo (formerly Sendinblue) API.
+Free tier: 300 emails/day
 """
 
 import os
 from typing import Optional
 import httpx
 
-MAILCHIMP_API_KEY = os.getenv("MAILCHIMP_API_KEY", "")
-MAILCHIMP_SERVER = os.getenv("MAILCHIMP_SERVER", "us1")  # e.g., us1, us2
-MAILCHIMP_DOMAIN = os.getenv("MAILCHIMP_DOMAIN", "yourdomain.com")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "noreply@yourdomain.com")
+BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "Marketing Engine")
 
-BASE_URL = f"https://{MAILCHIMP_SERVER}.api.mailchimp.com/3.0"
+BASE_URL = "https://api.brevo.com/v3"
 
 
 class EmailService:
-    def __init__(self, api_key: str = None, server: str = None):
-        self.api_key = api_key or MAILCHIMP_API_KEY
-        self.server = server or MAILCHIMP_SERVER
-        self.base_url = f"https://{self.server}.api.mailchimp.com/3.0"
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or BREVO_API_KEY
         self.enabled = bool(self.api_key)
     
     def _get_headers(self) -> dict:
         return {
-            "Authorization": f"Bearer {self.api_key}",
+            "api-key": self.api_key,
             "Content-Type": "application/json",
         }
     
@@ -37,7 +36,7 @@ class EmailService:
         from_name: str = None,
     ) -> dict:
         """
-        Send an email via Mailchimp Transactional (Mandrill).
+        Send an email via Brevo.
         
         Args:
             to_email: Recipient email address
@@ -52,43 +51,42 @@ class EmailService:
         if not self.enabled:
             return {"status": "mock", "message_id": f"mock-{hash(to_email)}"}
         
-        from_email = from_email or os.getenv("DEFAULT_FROM_EMAIL", "noreply@yourdomain.com")
-        from_name = from_name or os.getenv("DEFAULT_FROM_NAME", "Marketing Engine")
+        from_email = from_email or BREVO_SENDER_EMAIL
+        from_name = from_name or BREVO_SENDER_NAME
         
         payload = {
-            "message": {
-                "html": html_content,
-                "subject": subject,
-                "from_email": from_email,
-                "from_name": from_name,
-                "to": [
-                    {
-                        "email": to_email,
-                        "type": "to"
-                    }
-                ],
-            }
+            "sender": {
+                "email": from_email,
+                "name": from_name,
+            },
+            "to": [
+                {
+                    "email": to_email,
+                }
+            ],
+            "subject": subject,
+            "htmlContent": html_content,
         }
         
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/messages/send",
+                    f"{BASE_URL}/smtp/email",
                     json=payload,
                     headers=self._get_headers(),
                     timeout=30.0,
                 )
                 
-                if response.status_code == 200:
+                if response.status_code == 201:
                     data = response.json()
                     return {
                         "status": "sent",
-                        "message_id": data.get("_id", ""),
+                        "message_id": data.get("messageId", ""),
                     }
                 else:
                     return {
                         "status": "error",
-                        "error": f"Mailchimp error: {response.status_code} - {response.text}",
+                        "error": f"Brevo error: {response.status_code} - {response.text}",
                     }
             except Exception as e:
                 return {
@@ -128,6 +126,29 @@ class EmailService:
                 results["errors"].append(result.get("error", "Unknown error"))
         
         return results
+    
+    async def get_credits(self) -> dict:
+        """Get remaining email credits"""
+        if not self.enabled:
+            return {"remaining": "unlimited (mock)"}
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{BASE_URL}/account",
+                    headers=self._get_headers(),
+                    timeout=30.0,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return {
+                        "remaining": data.get("email", {}).get("remaining", "unknown"),
+                        "plan": data.get("plan", {}).get("name", "unknown"),
+                    }
+            except Exception:
+                pass
+        
+        return {"remaining": "unknown"}
 
 
 email_service = EmailService()

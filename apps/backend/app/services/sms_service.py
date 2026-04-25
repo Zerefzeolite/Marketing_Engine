@@ -1,29 +1,30 @@
 """
-SMS Service - Plivo Integration
+SMS Service - Twilio Integration
 
-Provides SMS sending capabilities via Plivo API.
+Provides SMS sending capabilities via Twilio API.
+Works in Jamaica (Digicel & Flow networks).
 """
 
 import os
 from typing import Optional
 import httpx
 
-PLIVO_AUTH_ID = os.getenv("PLIVO_AUTH_ID", "")
-PLIVO_AUTH_TOKEN = os.getenv("PLIVO_AUTH_TOKEN", "")
-PLIVO_PHONE_NUMBER = os.getenv("PLIVO_PHONE_NUMBER", "")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
 
-BASE_URL = "https://api.plivo.com/v1"
+BASE_URL = "https://api.twilio.com/2010-04-01"
 
 
 class SMSService:
-    def __init__(self, auth_id: str = None, auth_token: str = None, phone_number: str = None):
-        self.auth_id = auth_id or PLIVO_AUTH_ID
-        self.auth_token = auth_token or PLIVO_AUTH_TOKEN
-        self.phone_number = phone_number or PLIVO_PHONE_NUMBER
-        self.enabled = bool(self.auth_id and self.auth_token)
+    def __init__(self, account_sid: str = None, auth_token: str = None, phone_number: str = None):
+        self.account_sid = account_sid or TWILIO_ACCOUNT_SID
+        self.auth_token = auth_token or TWILIO_AUTH_TOKEN
+        self.phone_number = phone_number or TWILIO_PHONE_NUMBER
+        self.enabled = bool(self.account_sid and self.auth_token)
     
     def _get_auth(self) -> tuple[str, str]:
-        return (self.auth_id, self.auth_token)
+        return (self.account_sid, self.auth_token)
     
     async def send_sms(
         self,
@@ -31,48 +32,56 @@ class SMSService:
         message: str,
     ) -> dict:
         """
-        Send an SMS via Plivo.
+        Send an SMS via Twilio.
+        Works with Jamaican numbers (+1 876 xxx xxxx).
         
         Args:
-            to_number: Recipient phone number (E.164 format, e.g., +18761234567)
+            to_number: Recipient phone number (E.164 format)
             message: SMS text content
             
         Returns:
-            dict with status and message_uuid
+            dict with status and message_sid
         """
         if not self.enabled:
-            return {"status": "mock", "message_uuid": f"mock-{hash(to_number)}"}
+            return {"status": "mock", "message_sid": f"mock-{hash(to_number)}"}
         
-        # Format phone number if needed
-        if not to_number.startswith("+"):
-            to_number = f"+1{to_number}"  # Default to US/Jamaica
+        # Format phone number for Jamaica
+        # Accept: +18761234567, 18761234567, 8761234567
+        clean_number = to_number.replace("+", "").replace(" ", "").replace("-", "")
+        if len(clean_number) == 10:
+            clean_number = "1" + clean_number  # Add US country code
+        if not clean_number.startswith("+"):
+            clean_number = f"+{clean_number}"
+        
+        url = f"{BASE_URL}/Accounts/{self.account_sid}/Messages.json"
         
         payload = {
-            "src": self.phone_number,
-            "dst": to_number,
-            "text": message,
+            "To": clean_number,
+            "From": self.phone_number,
+            "Body": message,
         }
         
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{BASE_URL}/Account/{self.auth_id}/Message/",
-                    json=payload,
+                    url,
+                    data=payload,
                     auth=self._get_auth(),
                     timeout=30.0,
                 )
                 
-                if response.status_code in (200, 201, 202):
+                if response.status_code in (200, 201):
                     data = response.json()
                     return {
                         "status": "sent",
-                        "message_uuid": data.get("message_uuid", ""),
-                        "api_id": data.get("api_id", ""),
+                        "message_sid": data.get("sid", ""),
+                        "to": data.get("to", ""),
+                        "status_callback": data.get("status", ""),
                     }
                 else:
                     return {
                         "status": "error",
-                        "error": f"Plivo error: {response.status_code} - {response.text}",
+                        "error": f"Twilio error: {response.status_code} - {response.text}",
                     }
             except Exception as e:
                 return {
@@ -116,6 +125,20 @@ class SMSService:
                 results["errors"].append(result.get("error", "Unknown error"))
         
         return results
+    
+    def format_jamaican_number(self, number: str) -> str:
+        """Format a Jamaican number to E.164"""
+        digits = "".join(c for c in number if c.isdigit())
+        
+        if len(digits) == 10 and digits[0] == "1":
+            digits = digits[1:]  # Remove US prefix if present
+        
+        if len(digits) == 7:  # Local 7-digit
+            return f"+1876{digits}"
+        elif len(digits) == 10 and digits[0] == "1":  # US format
+            return f"+{digits}"
+        
+        return f"+{digits}"  # Assume already has country code
 
 
 sms_service = SMSService()

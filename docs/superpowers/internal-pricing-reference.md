@@ -44,8 +44,8 @@ This document outlines the internal cost structure and customer-facing pricing f
 
 | Channel | Your Cost Per Message | Provider |
 |---------|---------------------|----------|
-| Email | $_____ | _____ |
-| SMS | $_____ | _____ |
+| Email | $0.003 | Brevo (300/day free) |
+| SMS | $0.0075 | Twilio (Jamaica) |
 
 ---
 
