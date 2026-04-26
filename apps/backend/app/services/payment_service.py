@@ -47,27 +47,28 @@ def new_execution_id() -> str:
     return f"EXEC-{uuid4().hex[:8]}"
 
 
-def submit_payment(request_id: str, amount: int, method: PaymentMethod) -> dict:
+def submit_payment(request_id: str, amount: int, method: PaymentMethod, auto_approve: bool = False) -> dict:
     payments = _load_json(PAYMENT_STORAGE_FILE)
     
     payment_id = new_payment_id()
+    status = PaymentStatus.APPROVED if auto_approve else PaymentStatus.PENDING
     payment_record = {
         "payment_id": payment_id,
         "request_id": request_id,
         "amount": amount,
         "method": method.value,
-        "status": PaymentStatus.PENDING.value,
+        "status": status.value,
         "created_at": datetime.utcnow().isoformat(),
-        "verified_at": None,
+        "verified_at": datetime.utcnow().isoformat() if auto_approve else None,
         "ocr_extracted": None,
-        "admin_notes": None,
+        "admin_notes": "Auto-approved via dev button" if auto_approve else None,
     }
     
     payments[payment_id] = payment_record
     _save_json(PAYMENT_STORAGE_FILE, payments)
     
     instructions = _get_payment_instructions(method)
-    wait_time = "24-48 hours" if method in [PaymentMethod.LOCAL_BANK_TRANSFER, PaymentMethod.CASH] else None
+    wait_time = "0" if auto_approve else ("24-48 hours" if method in [PaymentMethod.LOCAL_BANK_TRANSFER, PaymentMethod.CASH] else None)
     
     return {
         "schema_version": "1.0",
@@ -75,7 +76,7 @@ def submit_payment(request_id: str, amount: int, method: PaymentMethod) -> dict:
         "request_id": request_id,
         "amount": amount,
         "method": method,
-        "status": PaymentStatus.PENDING,
+        "status": status,
         "payment_instructions": instructions,
         "expected_wait_time": wait_time,
     }
@@ -133,13 +134,18 @@ def verify_payment(payment_id: str, action: str, admin_notes: str | None = None)
             request_id, "payment_approved", payment
         )
         
+        # Auto-execute campaign after payment approval
+        auto_execute_result = _auto_execute_campaign(request_id)
+        
         return {
             "schema_version": "1.0",
             "payment_id": payment_id,
             "request_id": request_id,
             "status": PaymentStatus.COMPLETED,
-            "message": "Payment verified and approved. Campaign is now eligible for execution.",
+            "message": "Payment verified. Campaign launched for execution.",
             "notification_sent": notification_sent,
+            "auto_executed": auto_execute_result.get("success", False),
+            "execution_id": auto_execute_result.get("execution_id", ""),
         }
     else:
         payment["status"] = PaymentStatus.FAILED.value
@@ -353,3 +359,22 @@ def get_pending_payments() -> list[dict]:
 def get_all_payments() -> list[dict]:
     payments = _load_json(PAYMENT_STORAGE_FILE)
     return list(payments.values())
+
+
+def _auto_execute_campaign(request_id: str) -> dict:
+    """Auto-execute campaign after payment verified."""
+    try:
+        result = execute_campaign(request_id, {
+            "channels": ["email"],
+            "target_count": 1000,
+        })
+        return {
+            "success": True,
+            "execution_id": result.get("execution_id", ""),
+            "status": result.get("status", ""),
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+        }

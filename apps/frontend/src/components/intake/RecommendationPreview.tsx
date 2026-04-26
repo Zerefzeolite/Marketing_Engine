@@ -1,6 +1,7 @@
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import type { RecommendationPreviewData } from "../../lib/contracts/recommendation"
+import { calculatePackagePricing } from "../../lib/api/intake"
 
 type RecommendationPreviewProps = {
   recommendation: RecommendationPreviewData | null
@@ -22,6 +23,22 @@ export function RecommendationPreview({
   const router = useRouter()
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
   const [sliderValue, setSliderValue] = useState(recommendation?.estimated_reachable || 500)
+
+  // Recalculate package options when slider changes
+  const dynamicPackageOptions = useMemo(() => {
+    if (!recommendation) return []
+    const channel = recommendation.channel_split?.includes("sms") ? "sms" : "email"
+    return calculatePackagePricing(sliderValue, channel, recommendation.campaign_duration || "monthly")
+  }, [sliderValue, recommendation])
+
+  const packageOptions = dynamicPackageOptions.length > 0 ? dynamicPackageOptions : (recommendation?.package_options || [])
+
+  // Sync slider with recommendation when it changes
+  useEffect(() => {
+    if (recommendation?.estimated_reachable) {
+      setSliderValue(recommendation.estimated_reachable)
+    }
+  }, [recommendation?.estimated_reachable])
 
   function handleProceed() {
     const pkg = selectedPackage || recommendation?.recommended_package || "starter"
@@ -61,8 +78,6 @@ export function RecommendationPreview({
   const pkg = packageColors[recommendation.recommended_package] || packageColors.starter
   const confidencePct = Math.round(recommendation.confidence * 100)
 
-  const packageOptions = recommendation.package_options || []
-
   return (
     <section className="recommendation-card">
       <div className="rec-header">
@@ -90,15 +105,18 @@ export function RecommendationPreview({
       </div>
 
       <div className="reach-slider">
-        <label>Contact Range: {sliderValue.toLocaleString()} contacts</label>
+        <label>Contact Range: <strong>{sliderValue.toLocaleString()} contacts</strong></label>
         <input
           type="range"
           min={100}
-          max={recommendation?.estimated_reachable || 1000}
+          max={Math.max(recommendation?.estimated_reachable || 1000, sliderValue) * 2}
           value={sliderValue}
           onChange={(e) => setSliderValue(parseInt(e.target.value))}
         />
-        <p className="slider-note">Adjust to see pricing for different reach</p>
+        <div className="slider-labels">
+          <span>100</span>
+          <span>{Math.round((Math.max(recommendation?.estimated_reachable || 1000, sliderValue) * 2) / 2).toLocaleString()}</span>
+        </div>
       </div>
 
       {packageOptions.length > 0 && (
@@ -207,6 +225,7 @@ export function RecommendationPreview({
         .reach-slider { padding: 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 1rem; }
         .reach-slider label { font-size: 14px; font-weight: 600; color: #1e293b; display: block; }
         .reach-slider input { width: 100%; margin: 0.5rem 0; cursor: pointer; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
         .slider-note { font-size: 12px; color: #64748b; margin: 0; }
         .rec-stat {
           text-align: center;

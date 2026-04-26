@@ -65,6 +65,29 @@ export function PaymentStep({
 
   const currencySymbol = selectedCurrency === "USD" ? "US$" : "J$"
 
+  const isDevMode = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_DEBUG === "true"
+
+  async function handleDevAutoApprove() {
+    if (!confirm("Auto-approve this payment? This skips the receipt upload step.")) return
+    try {
+      setIsSubmitting(true)
+      setError("")
+      const result = await submitPayment({
+        request_id: requestId,
+        amount,
+        method: "LOCAL_BANK_TRANSFER",
+        auto_approve: true,
+      })
+      setPaymentId(result.payment_id)
+      setInstructions("Auto-approved (dev mode)")
+      onComplete(result.payment_id, "approved", "Payment auto-approved via dev button", "0")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Auto-approve failed")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   async function handleProceedToInstructions() {
     setStep("instructions")
   }
@@ -261,30 +284,20 @@ export function PaymentStep({
             <span className="pay-amount">{currencySymbol}{amount.toLocaleString()}</span>
           </div>
 
-          <p className="instruction-note">
-            {method === "LOCAL_BANK_TRANSFER" || method === "CASH"
-              ? "After making your payment, you'll be able to upload your receipt."
-              : "Please complete your payment and click Submit."}
+<p className="instruction-note">
+            Make payment using your selected method, then upload your receipt below.
           </p>
-
-          {error && <p className="error">{error}</p>}
-
-          <div className="actions">
-            <button className="btn-back" onClick={() => setStep("select")}>← Back</button>
-            <button className="btn-primary" onClick={handleSubmitPayment} disabled={isSubmitting}>
-              {isSubmitting ? "Processing..." : "I've Made Payment →"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Upload Receipt */}
-      {step === "receipt" && (
-        <div className="receipt-card">
-          <div className="success-icon">✓</div>
-          <h3>Payment Submitted</h3>
-          <p className="payment-id">Payment ID: {paymentId}</p>
           
+          {isDevMode && (
+            <button 
+              className="dev-auto-approve"
+              onClick={handleDevAutoApprove}
+              style={{ marginBottom: "1rem", padding: "0.5rem 1rem", background: "#7c3aed", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}
+            >
+              [DEV] Auto-Approve Payment
+            </button>
+          )}
+
           <div className="receipt-upload">
             <label>Upload Payment Receipt *</label>
             <p className="receipt-hint">Upload a photo or scan of your payment receipt</p>

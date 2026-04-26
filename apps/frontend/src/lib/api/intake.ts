@@ -169,7 +169,7 @@ export function getPackageDescription(tier: string): string {
   return descriptions[tier] || descriptions.growth
 }
 
-function calculatePackagePricing(
+export function calculatePackagePricing(
   contactRange: number,
   channel: string,
   duration: string = "monthly",

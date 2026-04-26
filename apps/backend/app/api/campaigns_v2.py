@@ -307,6 +307,22 @@ def get_executions(campaign_id: str | None = None) -> list[dict]:
     return execution_service.get_execution_history(campaign_id)
 
 
+@router.get("/moderation/pending-reviews")
+def get_pending_reviews() -> list[dict]:
+    sessions = campaign_service._load_sessions()
+    pending = []
+    for session_id, session in sessions.items():
+        if session.get("status") == "UNDER_MANUAL_REVIEW":
+            pending.append({
+                "campaign_session_id": session_id,
+                "ticket_id": session.get("manual_review_ticket_id"),
+                "client_email": session.get("client_email"),
+                "created_at": session.get("created_at"),
+                "campaign_name": session.get("campaign_name", "Untitled Campaign"),
+            })
+    return pending
+
+
 @router.post("/{campaign_id}/execute")
 def execute_campaign(campaign_id: str) -> dict:
     try:
