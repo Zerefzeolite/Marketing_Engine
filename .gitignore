@@ -1,0 +1,7 @@
+.worktrees/
+.gitnexus
+
+# Environment variables
+.env
+.env.local
+.env.*.local
