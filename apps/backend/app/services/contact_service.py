@@ -4,7 +4,7 @@ import json
 from uuid import uuid4
 
 SERVICE_FILE = Path(__file__).resolve()
-DATA_DIR = SERVICE_FILE.parent.parent.parent.parent.parent / "data"
+DATA_DIR = SERVICE_FILE.parent.parent.parent.parent / "data"
 
 CONTACTS_FILE = DATA_DIR / "contacts.json"
 
@@ -22,20 +22,32 @@ def _save_contacts(contacts: dict) -> None:
         json.dump(contacts, f, indent=2)
 
 
+def _new_contact_id() -> str:
+    return f"CNT-{uuid4().hex[:8].upper()}"
+
+
 def create_contact(
     email: str,
-    name: str | None = None,
     phone: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    tags: list[str] | None = None,
+    source: str = "manual",
+    opt_out: bool = False,
     campaign_ids: list[str] | None = None,
 ) -> dict:
     contacts = _load_contacts()
-    contact_id = f"CNT-{uuid4().hex[:8].upper()}"
+    contact_id = _new_contact_id()
     now = datetime.now(UTC).isoformat()
     contacts[contact_id] = {
         "contact_id": contact_id,
         "email": email,
-        "name": name,
         "phone": phone,
+        "first_name": first_name,
+        "last_name": last_name,
+        "tags": tags or [],
+        "source": source,
+        "opt_out": opt_out,
         "campaigns": campaign_ids or [],
         "created_at": now,
         "updated_at": now,
@@ -53,41 +65,72 @@ def list_contacts(
     campaign_id: str | None = None,
     limit: int = 100,
     offset: int = 0,
+    tags: list[str] | None = None,
+    opt_out: bool | None = None,
+    source: str | None = None,
 ) -> list[dict]:
     contacts = _load_contacts()
     result = list(contacts.values())
+
+    # Filter by campaign
     if campaign_id:
         result = [c for c in result if campaign_id in c.get("campaigns", [])]
+
+    # Filter by tags (any match)
+    if tags:
+        result = [
+            c for c in result
+            if any(tag in c.get("tags", []) for tag in tags)
+        ]
+
+    # Filter by opt_out status
+    if opt_out is not None:
+        result = [c for c in result if c.get("opt_out") == opt_out]
+
+    # Filter by source
+    if source:
+        result = [c for c in result if c.get("source") == source]
+
+    # Sort by created_at descending
+    result.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
     return result[offset : offset + limit]
 
 
-def import_contacts(
-    rows: list[dict],
-    default_campaign_id: str | None = None,
-) -> dict:
+def update_contact(
+    contact_id: str,
+    email: str | None = None,
+    phone: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    tags: list[str] | None = None,
+    source: str | None = None,
+    opt_out: bool | None = None,
+) -> dict | None:
     contacts = _load_contacts()
-    imported = 0
-    for row in rows:
-        email = row.get("email")
-        if not email:
-            continue
-        contact_id = f"CNT-{uuid4().hex[:8].upper()}"
-        now = datetime.now(UTC).isoformat()
-        campaign_ids = row.get("campaigns", [])
-        if default_campaign_id and default_campaign_id not in campaign_ids:
-            campaign_ids.append(default_campaign_id)
-        contacts[contact_id] = {
-            "contact_id": contact_id,
-            "email": email,
-            "name": row.get("name"),
-            "phone": row.get("phone"),
-            "campaigns": campaign_ids,
-            "created_at": now,
-            "updated_at": now,
-        }
-        imported += 1
+    if contact_id not in contacts:
+        return None
+
+    contact = contacts[contact_id]
+    if email is not None:
+        contact["email"] = email
+    if phone is not None:
+        contact["phone"] = phone
+    if first_name is not None:
+        contact["first_name"] = first_name
+    if last_name is not None:
+        contact["last_name"] = last_name
+    if tags is not None:
+        contact["tags"] = tags
+    if source is not None:
+        contact["source"] = source
+    if opt_out is not None:
+        contact["opt_out"] = opt_out
+
+    contact["updated_at"] = datetime.now(UTC).isoformat()
+    contacts[contact_id] = contact
     _save_contacts(contacts)
-    return {"imported": imported, "total": len(contacts)}
+    return contact
 
 
 def delete_contact(contact_id: str) -> bool:
@@ -97,3 +140,100 @@ def delete_contact(contact_id: str) -> bool:
         _save_contacts(contacts)
         return True
     return False
+
+
+def import_contacts(
+    rows: list[dict],
+    default_campaign_id: str | None = None,
+) -> dict:
+    contacts = _load_contacts()
+    imported = 0
+    failed = 0
+    errors = []
+
+    for idx, row in enumerate(rows):
+        email = row.get("email")
+        if not email:
+            failed += 1
+            errors.append(f"Row {idx + 1}: Missing email")
+            continue
+
+        # Check for duplicate email
+        if any(c.get("email") == email for c in contacts.values()):
+            failed += 1
+            errors.append(f"Row {idx + 1}: Duplicate email {email}")
+            continue
+
+        contact_id = _new_contact_id()
+        now = datetime.now(UTC).isoformat()
+        campaign_ids = row.get("campaigns", [])
+        if default_campaign_id and default_campaign_id not in campaign_ids:
+            campaign_ids.append(default_campaign_id)
+
+        # Parse tags (could be list or comma-separated string)
+        tags = row.get("tags", [])
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+
+        contacts[contact_id] = {
+            "contact_id": contact_id,
+            "email": email,
+            "phone": row.get("phone"),
+            "first_name": row.get("first_name"),
+            "last_name": row.get("last_name"),
+            "tags": tags,
+            "source": row.get("source", "import"),
+            "opt_out": row.get("opt_out", False),
+            "campaigns": campaign_ids,
+            "created_at": now,
+            "updated_at": now,
+        }
+        imported += 1
+
+    _save_contacts(contacts)
+    return {"imported": imported, "failed": failed, "errors": errors, "total": len(contacts)}
+
+
+def add_tag(contact_id: str, tag: str) -> dict | None:
+    contacts = _load_contacts()
+    if contact_id not in contacts:
+        return None
+
+    contact = contacts[contact_id]
+    tags = contact.get("tags", [])
+    if tag not in tags:
+        tags.append(tag)
+    contact["tags"] = tags
+    contact["updated_at"] = datetime.now(UTC).isoformat()
+    contacts[contact_id] = contact
+    _save_contacts(contacts)
+    return contact
+
+
+def remove_tag(contact_id: str, tag: str) -> dict | None:
+    contacts = _load_contacts()
+    if contact_id not in contacts:
+        return None
+
+    contact = contacts[contact_id]
+    tags = contact.get("tags", [])
+    if tag in tags:
+        tags.remove(tag)
+    contact["tags"] = tags
+    contact["updated_at"] = datetime.now(UTC).isoformat()
+    contacts[contact_id] = contact
+    _save_contacts(contacts)
+    return contact
+
+
+def set_opt_out(contact_id: str, opt_out: bool = True) -> dict | None:
+    contacts = _load_contacts()
+    if contact_id not in contacts:
+        return None
+
+    contact = contacts[contact_id]
+    contact["opt_out"] = opt_out
+    contact["updated_at"] = datetime.now(UTC).isoformat()
+    contacts[contact_id] = contact
+    _save_contacts(contacts)
+    return contact
