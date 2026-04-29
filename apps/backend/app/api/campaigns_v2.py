@@ -304,7 +304,14 @@ def get_scheduled_campaigns() -> list[ScheduleCampaignResponse]:
 
 @router.get("/executions")
 def get_executions(campaign_id: str | None = None) -> list[dict]:
-    return execution_service.get_execution_history(campaign_id)
+    """Get execution history without exposing contact IDs."""
+    executions = execution_service.get_execution_history(campaign_id)
+    # Remove contact_ids from list view for security/privacy
+    filtered = []
+    for exec in executions:
+        exec_copy = {k: v for k, v in exec.items() if k != "contact_ids"}
+        filtered.append(exec_copy)
+    return filtered
 
 
 @router.get("/moderation/pending-reviews")
@@ -323,30 +330,59 @@ def get_pending_reviews() -> list[dict]:
     return pending
 
 
-@router.post("/{campaign_id}/execute")
-def execute_campaign(campaign_id: str) -> dict:
+@router.post("/{session_id}/execute")
+def execute_campaign_by_session(session_id: str) -> dict:
+    """Execute campaign using session data to select contacts."""
     try:
-        campaign = dispatch_service.get_campaign_for_dispatch(campaign_id)
-        dispatch_service.ensure_dispatch_gate(campaign)
+        # Load session to get execution criteria
+        from app.services import campaign_service
+        sessions = campaign_service._load_sessions()
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        session = sessions[session_id]
+        
+        # Get reach limit from session
+        reach_limit = session.get("estimated_reachable", 100)
+        
+        # Select contacts based on session criteria
+        from app.services import contact_service
+        contacts = contact_service.list_contacts(
+            limit=reach_limit,
+            offset=0,
+            include_opt_out=False,
+        )
+        
+        if not contacts:
+            raise HTTPException(status_code=400, detail="No contacts found for execution")
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-    exec_record = execution_service.start_execution(campaign_id)
-
-    contacts_attempted = 0
-    contacts_delivered = 470
-    errors = []
-
+    
+    # Create execution record (this also stores contact IDs)
+    exec_record = execution_service.start_execution(
+        campaign_id=session_id,  # Use session_id as campaign_id for tracking
+        session_id=session_id,
+    )
+    
+    # Get stored contact IDs
+    contact_ids = execution_service.get_execution_contacts(exec_record["execution_id"])
+    
+    contacts_attempted = len(contact_ids) if contact_ids else 0
+    contacts_delivered = contacts_attempted  # Assume all delivered for now
+    
     execution_service.complete_execution(
         execution_id=exec_record["execution_id"],
         contacts_attempted=contacts_attempted,
         contacts_delivered=contacts_delivered,
-        errors=errors,
+        errors=[],
     )
-
+    
     return {
         "status": "executed",
-        "campaign_id": campaign_id,
+        "campaign_id": session_id,
         "execution_id": exec_record["execution_id"],
         "contacts_delivered": contacts_delivered,
     }

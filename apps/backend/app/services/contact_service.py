@@ -34,6 +34,12 @@ def create_contact(
     tags: list[str] | None = None,
     source: str = "manual",
     opt_out: bool = False,
+    dob: str | None = None,
+    age_group: str | None = None,
+    gender: str | None = None,
+    parish: str | None = None,
+    preferred_channel: str | None = None,
+    engagement_score: float | None = None,
     campaign_ids: list[str] | None = None,
 ) -> dict:
     contacts = _load_contacts()
@@ -48,6 +54,12 @@ def create_contact(
         "tags": tags or [],
         "source": source,
         "opt_out": opt_out,
+        "dob": dob,
+        "age_group": age_group,
+        "gender": gender,
+        "parish": parish,
+        "preferred_channel": preferred_channel,
+        "engagement_score": engagement_score,
         "campaigns": campaign_ids or [],
         "created_at": now,
         "updated_at": now,
@@ -68,6 +80,12 @@ def list_contacts(
     tags: list[str] | None = None,
     opt_out: bool | None = None,
     source: str | None = None,
+    parish: str | None = None,
+    age_group: str | None = None,
+    gender: str | None = None,
+    preferred_channel: str | None = None,
+    engagement_min: float | None = None,
+    include_opt_out: bool = False,
 ) -> list[dict]:
     contacts = _load_contacts()
     result = list(contacts.values())
@@ -91,9 +109,32 @@ def list_contacts(
     if source:
         result = [c for c in result if c.get("source") == source]
 
+    # Filter by parish
+    if parish:
+        result = [c for c in result if c.get("parish") == parish]
+
+    # Filter by age_group
+    if age_group:
+        result = [c for c in result if c.get("age_group") == age_group]
+
+    # Filter by gender
+    if gender:
+        result = [c for c in result if c.get("gender") == gender]
+
+    # Filter by preferred_channel
+    if preferred_channel:
+        result = [c for c in result if c.get("preferred_channel") == preferred_channel]
+
+    # Filter by engagement score minimum
+    if engagement_min is not None:
+        result = [c for c in result if (c.get("engagement_score") or 0) >= engagement_min]
+
+    # Exclude opt-outs (unless include_opt_out=True or opt_out filter is explicitly set)
+    if not include_opt_out and opt_out is None:
+        result = [c for c in result if not c.get("opt_out", False)]
+
     # Sort by created_at descending
     result.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
     return result[offset : offset + limit]
 
 
@@ -106,6 +147,12 @@ def update_contact(
     tags: list[str] | None = None,
     source: str | None = None,
     opt_out: bool | None = None,
+    dob: str | None = None,
+    age_group: str | None = None,
+    gender: str | None = None,
+    parish: str | None = None,
+    preferred_channel: str | None = None,
+    engagement_score: float | None = None,
 ) -> dict | None:
     contacts = _load_contacts()
     if contact_id not in contacts:
@@ -126,6 +173,18 @@ def update_contact(
         contact["source"] = source
     if opt_out is not None:
         contact["opt_out"] = opt_out
+    if dob is not None:
+        contact["dob"] = dob
+    if age_group is not None:
+        contact["age_group"] = age_group
+    if gender is not None:
+        contact["gender"] = gender
+    if parish is not None:
+        contact["parish"] = parish
+    if preferred_channel is not None:
+        contact["preferred_channel"] = preferred_channel
+    if engagement_score is not None:
+        contact["engagement_score"] = engagement_score
 
     contact["updated_at"] = datetime.now(UTC).isoformat()
     contacts[contact_id] = contact

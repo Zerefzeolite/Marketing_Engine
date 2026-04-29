@@ -72,7 +72,8 @@ def start_session(client_email: str) -> dict:
     session_payload = _canonicalize_temporal_fields(session.model_dump(mode="json"))
     sessions[session.campaign_session_id] = session_payload
     _save_sessions(sessions)
-    return session_payload
+    # Return with session_id key for API compatibility
+    return {"session_id": session.campaign_session_id, **session_payload}
 
 
 def run_moderation_check(
