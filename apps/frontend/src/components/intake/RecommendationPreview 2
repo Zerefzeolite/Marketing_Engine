@@ -1,0 +1,161 @@
+import type { RecommendationPreviewData } from "../../lib/contracts/recommendation"
+
+type RecommendationPreviewProps = {
+  recommendation: RecommendationPreviewData | null
+}
+
+const packageColors: Record<string, { bg: string; text: string; label: string }> = {
+  starter: { bg: "#dcfce7", text: "#166534", label: "Starter" },
+  growth: { bg: "#dbeafe", text: "#1e40af", label: "Growth" },
+  premium: { bg: "#fef3c7", text: "#92400e", label: "Premium" },
+}
+
+export function RecommendationPreview({
+  recommendation,
+}: RecommendationPreviewProps) {
+  if (!recommendation) {
+    return (
+      <section className="recommendation-empty">
+        <div className="empty-icon">📋</div>
+        <p>Fill out the form to get your personalized campaign recommendation</p>
+        <style>{`.recommendation-empty { text-align: center; padding: 3rem 1rem; color: #64748b; } .empty-icon { font-size: 48px; margin-bottom: 1rem; }`}</style>
+      </section>
+    )
+  }
+
+  const pkg = packageColors[recommendation.recommended_package] || packageColors.starter
+  const confidencePct = Math.round(recommendation.confidence * 100)
+
+  return (
+    <section className="recommendation-card">
+      <div className="rec-header">
+        <h3>Your Recommendation</h3>
+        <span className="package-badge" style={{ background: pkg.bg, color: pkg.text }}>
+          {pkg.label} Package
+        </span>
+      </div>
+
+      <div className="rec-grid">
+        <div className="rec-stat">
+          <div className="stat-value">{recommendation.estimated_reachable.toLocaleString()}</div>
+          <div className="stat-label">Estimated Reach</div>
+        </div>
+        <div className="rec-stat">
+          <div className="stat-value">{recommendation.channel_split}</div>
+          <div className="stat-label">Channel Mix</div>
+        </div>
+        <div className="rec-stat">
+          <div className="stat-value" style={{ color: confidencePct >= 80 ? "#16a34a" : confidencePct >= 70 ? "#ca8a04" : "#dc2626" }}>
+            {confidencePct}%
+          </div>
+          <div className="stat-label">Confidence</div>
+        </div>
+      </div>
+
+      <div className="rec-rationale">
+        <h4>Why this recommendation?</h4>
+        <p>{recommendation.rationale_summary}</p>
+      </div>
+
+      <div className="rec-actions">
+        <button className="btn-primary">Proceed with this recommendation</button>
+        <button className="btn-secondary">Adjust my preferences</button>
+      </div>
+
+      <style>{`
+        .recommendation-card {
+          margin-top: 2rem;
+          padding: 1.5rem;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .rec-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+        }
+        .rec-header h3 {
+          margin: 0;
+          font-size: 18px;
+          color: #1e293b;
+        }
+        .package-badge {
+          padding: 0.375rem 0.75rem;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+        }
+        .rec-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+        .rec-stat {
+          text-align: center;
+          padding: 1rem;
+          background: #f8fafc;
+          border-radius: 8px;
+        }
+        .stat-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .rec-rationale {
+          padding: 1rem;
+          background: #f1f5f9;
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+        }
+        .rec-rationale h4 {
+          margin: 0 0 0.5rem;
+          font-size: 14px;
+          color: #475569;
+        }
+        .rec-rationale p {
+          margin: 0;
+          color: #334155;
+          line-height: 1.5;
+        }
+        .rec-actions {
+          display: flex;
+          gap: 1rem;
+        }
+        .rec-actions button {
+          flex: 1;
+          padding: 0.75rem 1rem;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .btn-primary {
+          background: #4f46e5;
+          color: white;
+        }
+        .btn-primary:hover {
+          background: #4338ca;
+        }
+        .btn-secondary {
+          background: #f1f5f9;
+          color: #475569;
+        }
+        .btn-secondary:hover {
+          background: #e2e8f0;
+        }
+      `}</style>
+    </section>
+  )
+}
