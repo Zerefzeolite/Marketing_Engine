@@ -75,7 +75,7 @@ export function PaymentStatusDisplay({
     }
   }
 
-  const isVerified = status === "COMPLETED"
+  const isVerified = status === "COMPLETED" || status === "APPROVED"
 
   function handlePrint() {
     window.print()
@@ -187,6 +187,7 @@ export function PaymentStatusDisplay({
         .status-row .label { color: #64748b; font-size: 14px; }
         .status-row .value { color: #1e293b; font-weight: 500; font-size: 14px; }
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-badge.approved { background: #dbeafe; color: #1e40af; }
         .status-badge.pending { background: #fef3c7; color: #92400e; }
         .status-badge.completed { background: #dcfce7; color: #166534; }
         .status-badge.failed { background: #fee2e2; color: #dc2626; }
