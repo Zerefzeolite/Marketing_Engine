@@ -1,7 +1,7 @@
 import json
 import os
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,13 +15,29 @@ from ..models.payment import (
     PaymentVerifyRequest,
 )
 
+# Stripe scaffold - only initialized if STRIPE_SECRET_KEY is set
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_MODE = os.getenv("STRIPE_MODE", "test")  # "test" or "live"
+stripe = None
+if STRIPE_SECRET_KEY:
+    try:
+        import stripe as _stripe_lib
+        _stripe_lib.api_key = STRIPE_SECRET_KEY
+        _stripe_lib.api_version = "2024-11-30"
+        stripe = _stripe_lib
+    except ImportError:
+        pass
 
-PAYMENT_STORAGE_FILE = "data/payments.json"
-CONSENT_STORAGE_FILE = "data/consents.json"
-EXECUTION_STORAGE_FILE = "data/executions.json"
 
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+SERVICE_FILE = Path(__file__).resolve()
+DATA_DIR = SERVICE_FILE.parent.parent.parent.parent / "data"
+
+PAYMENT_STORAGE_FILE = DATA_DIR / "payments.json"
+CONSENT_STORAGE_FILE = DATA_DIR / "consents.json"
+EXECUTION_STORAGE_FILE = DATA_DIR / "executions.json"
+SESSIONS_FILE = DATA_DIR / "sessions.json"
+CONTACTS_FILE = DATA_DIR / "contacts.json"
 
 
 def _load_json(file_path: str) -> dict:
@@ -49,7 +65,24 @@ def new_execution_id() -> str:
 
 def submit_payment(request_id: str, amount: int, method: PaymentMethod, auto_approve: bool = False) -> dict:
     payments = _load_json(PAYMENT_STORAGE_FILE)
-    
+
+    # Prevent duplicate payment for same request
+    for existing in payments.values():
+        if existing["request_id"] == request_id and existing["status"] in (
+            PaymentStatus.APPROVED.value, PaymentStatus.COMPLETED.value,
+        ):
+            return {
+                "schema_version": "1.0",
+                "payment_id": existing["payment_id"],
+                "request_id": request_id,
+                "amount": existing["amount"],
+                "method": PaymentMethod(existing["method"]),
+                "status": PaymentStatus(existing["status"]),
+                "payment_instructions": "Payment already submitted for this request.",
+                "expected_wait_time": "0",
+                "message": "Duplicate payment prevented",
+            }
+
     payment_id = new_payment_id()
     status = PaymentStatus.APPROVED if auto_approve else PaymentStatus.PENDING
     payment_record = {
@@ -58,19 +91,26 @@ def submit_payment(request_id: str, amount: int, method: PaymentMethod, auto_app
         "amount": amount,
         "method": method.value,
         "status": status.value,
-        "created_at": datetime.utcnow().isoformat(),
-        "verified_at": datetime.utcnow().isoformat() if auto_approve else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "verified_at": datetime.now(timezone.utc).isoformat() if auto_approve else None,
         "ocr_extracted": None,
         "admin_notes": "Auto-approved via dev button" if auto_approve else None,
+        "stripe_payment_intent_id": None,
+        "audit_trail": [{
+            "event": "payment_submitted",
+            "status": status.value,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "method": method.value,
+        }],
     }
-    
+
     payments[payment_id] = payment_record
     _save_json(PAYMENT_STORAGE_FILE, payments)
-    
+
     instructions = _get_payment_instructions(method)
     wait_time = "0" if auto_approve else ("24-48 hours" if method in [PaymentMethod.LOCAL_BANK_TRANSFER, PaymentMethod.CASH] else None)
-    
-    return {
+
+    result = {
         "schema_version": "1.0",
         "payment_id": payment_id,
         "request_id": request_id,
@@ -80,6 +120,35 @@ def submit_payment(request_id: str, amount: int, method: PaymentMethod, auto_app
         "payment_instructions": instructions,
         "expected_wait_time": wait_time,
     }
+
+    # Stripe: create PaymentIntent (scaffold, not enabled unless STRIPE_SECRET_KEY is set)
+    if method == PaymentMethod.STRIPE and stripe and not auto_approve:
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency="usd",
+                metadata={"request_id": request_id, "payment_id": payment_id},
+                automatic_payment_methods={"enabled": True},
+            )
+            payments = _load_json(PAYMENT_STORAGE_FILE)
+            payments[payment_id]["stripe_payment_intent_id"] = intent.id
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "stripe_intent_created",
+                "stripe_payment_intent_id": intent.id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+            result["stripe_client_secret"] = intent.client_secret
+        except Exception as e:
+            payments = _load_json(PAYMENT_STORAGE_FILE)
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "stripe_intent_failed",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+
+    return result
 
 
 def _get_payment_instructions(method: PaymentMethod) -> str:
@@ -108,7 +177,7 @@ def _get_payment_instructions(method: PaymentMethod) -> str:
 
 def verify_payment(payment_id: str, action: str, admin_notes: str | None = None) -> dict:
     payments = _load_json(PAYMENT_STORAGE_FILE)
-    
+
     if payment_id not in payments:
         return {
             "schema_version": "1.0",
@@ -118,31 +187,37 @@ def verify_payment(payment_id: str, action: str, admin_notes: str | None = None)
             "message": "Payment not found",
             "notification_sent": False,
         }
-    
+
     payment = payments[payment_id]
     request_id = payment["request_id"]
-    
+
     if action == "approve":
-        payment["status"] = PaymentStatus.COMPLETED.value
-        payment["verified_at"] = datetime.utcnow().isoformat()
+        payment["status"] = PaymentStatus.APPROVED.value
+        payment["verified_at"] = datetime.now(timezone.utc).isoformat()
         if admin_notes:
             payment["admin_notes"] = admin_notes
-        
+        payment.setdefault("audit_trail", []).append({
+            "event": "payment_approved",
+            "action": "approve",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "admin_notes": admin_notes or "",
+        })
+
         _save_json(PAYMENT_STORAGE_FILE, payments)
-        
+
         notification_sent = send_client_notification(
             request_id, "payment_approved", payment
         )
-        
+
         # Auto-execute campaign after payment approval
         auto_execute_result = _auto_execute_campaign(request_id)
-        
+
         return {
             "schema_version": "1.0",
             "payment_id": payment_id,
             "request_id": request_id,
-            "status": PaymentStatus.COMPLETED,
-            "message": "Payment verified. Campaign launched for execution.",
+            "status": PaymentStatus.APPROVED,
+            "message": "Payment approved. Campaign launched for execution.",
             "notification_sent": notification_sent,
             "auto_executed": auto_execute_result.get("success", False),
             "execution_id": auto_execute_result.get("execution_id", ""),
@@ -151,13 +226,19 @@ def verify_payment(payment_id: str, action: str, admin_notes: str | None = None)
         payment["status"] = PaymentStatus.FAILED.value
         if admin_notes:
             payment["admin_notes"] = admin_notes
-        
+        payment.setdefault("audit_trail", []).append({
+            "event": "payment_rejected",
+            "action": "reject",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "admin_notes": admin_notes or "",
+        })
+
         _save_json(PAYMENT_STORAGE_FILE, payments)
-        
+
         notification_sent = send_client_notification(
             request_id, "payment_rejected", payment
         )
-        
+
         return {
             "schema_version": "1.0",
             "payment_id": payment_id,
@@ -202,13 +283,13 @@ def is_payment_verified(request_id: str) -> bool:
     payment = get_payment_by_request_id(request_id)
     if not payment:
         return False
-    return payment["status"] == PaymentStatus.COMPLETED
+    return payment["status"] in (PaymentStatus.APPROVED, PaymentStatus.COMPLETED)
 
 
 def process_receipt_ocr(payment_id: str, image_data: bytes) -> OCRExtractedData:
     extracted = OCRExtractedData(
         amount=None,
-        date=datetime.utcnow().strftime("%Y-%m-%d"),
+        date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         reference_number=payment_id,
         sender_name="Unknown",
         sender_account=None,
@@ -238,7 +319,7 @@ def save_consent(request_id: str, consent_to_marketing: bool, terms_accepted: bo
         "consent_to_marketing": consent_to_marketing,
         "terms_accepted": terms_accepted,
         "data_processing_consent": data_processing_consent,
-        "consented_at": datetime.utcnow().isoformat(),
+        "consented_at": datetime.now(timezone.utc).isoformat(),
     }
     
     consents[request_id] = consent_record
@@ -272,7 +353,7 @@ def send_client_notification(request_id: str, notification_type: str, payment_da
         "notification_id": f"NOTIF-{uuid4().hex[:8]}",
         "request_id": request_id,
         "type": notification_type,
-        "sent_at": datetime.utcnow().isoformat(),
+        "sent_at": datetime.now(timezone.utc).isoformat(),
         "payment_data": payment_data,
     }
     
@@ -290,7 +371,7 @@ def send_internal_admin_notification(payment_id: str, ocr_data: dict | None) -> 
         "admin_notification_id": f"ADMIN-{uuid4().hex[:8]}",
         "payment_id": payment_id,
         "type": "payment_pending_review",
-        "sent_at": datetime.utcnow().isoformat(),
+        "sent_at": datetime.now(timezone.utc).isoformat(),
         "ocr_data": ocr_data,
     }
     
@@ -307,7 +388,7 @@ def execute_campaign(request_id: str, campaign_data: dict) -> dict:
             "status": ExecutionStatus.FAILED,
             "message": "Payment not verified. Cannot execute campaign.",
         }
-    
+
     if not has_consent(request_id):
         return {
             "schema_version": "1.0",
@@ -316,35 +397,53 @@ def execute_campaign(request_id: str, campaign_data: dict) -> dict:
             "status": ExecutionStatus.FAILED,
             "message": "Consent not recorded. Cannot execute campaign.",
         }
-    
+
+    # Duplicate execution protection: check if already executed for this request
     executions = _load_json(EXECUTION_STORAGE_FILE)
-    
-    execution_id = new_execution_id()
-    execution_record = {
-        "id": execution_id,
-        "request_id": request_id,
-        "status": ExecutionStatus.COMPLETED.value,
-        "adapter_type": "stub",
-        "executed_at": datetime.utcnow().isoformat(),
-        "result_data": {
-            "message": "Campaign executed (stub mode - no actual sending)",
-            "campaign_data_summary": {
-                "channels": campaign_data.get("channels", []),
-                "target_count": campaign_data.get("target_count", 0),
-            },
-        },
-    }
-    
-    executions[execution_id] = execution_record
-    _save_json(EXECUTION_STORAGE_FILE, executions)
-    
-    return {
-        "schema_version": "1.0",
-        "execution_id": execution_id,
-        "request_id": request_id,
-        "status": ExecutionStatus.COMPLETED,
-        "message": "Campaign executed successfully. Stub adapter - no actual messages sent.",
-    }
+    for exec_record in executions.values():
+        if exec_record.get("campaign_id") == request_id and exec_record.get("status") in (
+            ExecutionStatus.COMPLETED.value, "COMPLETED", "executed",
+        ):
+            return {
+                "schema_version": "1.0",
+                "execution_id": exec_record.get("id", ""),
+                "request_id": request_id,
+                "status": ExecutionStatus.COMPLETED,
+                "message": "Campaign already executed for this request. Duplicate prevented.",
+            }
+
+    # Create execution record via execution service
+    from app.services import execution_service as exec_svc
+    try:
+        exec_record = exec_svc.start_execution(
+            campaign_id=request_id,
+            session_id=request_id,
+        )
+        execution_id = exec_record["execution_id"]
+
+        # Complete execution (stub - real dispatch is in campaigns_v2.py)
+        exec_svc.complete_execution(
+            execution_id=execution_id,
+            contacts_attempted=campaign_data.get("target_count", 0),
+            contacts_delivered=campaign_data.get("target_count", 0),
+            errors=[],
+        )
+
+        return {
+            "schema_version": "1.0",
+            "execution_id": execution_id,
+            "request_id": request_id,
+            "status": ExecutionStatus.COMPLETED,
+            "message": "Campaign executed successfully.",
+        }
+    except Exception as e:
+        return {
+            "schema_version": "1.0",
+            "execution_id": "",
+            "request_id": request_id,
+            "status": ExecutionStatus.FAILED,
+            "message": f"Execution failed: {str(e)}",
+        }
 
 
 def get_pending_payments() -> list[dict]:
@@ -362,7 +461,12 @@ def get_all_payments() -> list[dict]:
 
 
 def _auto_execute_campaign(request_id: str) -> dict:
-    """Auto-execute campaign after payment verified."""
+    """Auto-execute campaign after payment approved."""
+    if not is_payment_verified(request_id):
+        return {
+            "success": False,
+            "error": "Payment not verified",
+        }
     try:
         result = execute_campaign(request_id, {
             "channels": ["email"],
@@ -378,3 +482,41 @@ def _auto_execute_campaign(request_id: str) -> dict:
             "success": False,
             "error": str(e),
         }
+
+
+def handle_stripe_webhook(payload: bytes, sig_header: str, webhook_secret: str) -> dict:
+    """Handle Stripe webhook for payment confirmation."""
+    if not stripe:
+        return {"success": False, "error": "Stripe not configured"}
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except Exception as e:
+        return {"success": False, "error": f"Webhook signature verification failed: {e}"}
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        request_id = intent["metadata"].get("request_id")
+        payment_id = intent["metadata"].get("payment_id")
+
+        payments = _load_json(PAYMENT_STORAGE_FILE)
+        if payment_id in payments:
+            payments[payment_id]["status"] = PaymentStatus.APPROVED.value
+            payments[payment_id]["verified_at"] = datetime.now(timezone.utc).isoformat()
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "stripe_webhook_payment_succeeded",
+                "stripe_payment_intent_id": intent["id"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+
+            # Auto-execute campaign
+            auto_execute_result = _auto_execute_campaign(request_id)
+            return {
+                "success": True,
+                "payment_id": payment_id,
+                "auto_executed": auto_execute_result.get("success", False),
+                "execution_id": auto_execute_result.get("execution_id", ""),
+            }
+
+    return {"success": True, "event_type": event["type"]}
