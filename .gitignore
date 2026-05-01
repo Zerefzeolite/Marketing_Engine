@@ -5,3 +5,45 @@
 .env
 .env.local
 .env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+*.log
+*.tmp
+*.swp
+*~
+
+# Frontend
+node_modules/
+.next/
+.nuxt/
+dist/
+.vite/
+
+# Data / runtime artifacts
+data/*.json
+!data/.gitkeep
+uploads/
+receipts/
+*.sqlite
+*.db
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Tooling
+.superpowers/
+.vite/
+.claude/skills/gitnexus/gitnexus-*/

@@ -1,0 +1,2 @@
+# Keep data directory tracked in git
+# JSON files are gitignored but this ensures the directory exists
