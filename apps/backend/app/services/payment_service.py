@@ -17,6 +17,7 @@ from ..models.payment import (
 
 # Stripe scaffold - only initialized if STRIPE_SECRET_KEY is set
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_MODE = os.getenv("STRIPE_MODE", "test")  # "test" or "live"
 stripe = None
@@ -28,6 +29,12 @@ if STRIPE_SECRET_KEY:
         stripe = _stripe_lib
     except ImportError:
         pass
+
+# PayPal config - only used if PAYPAL_CLIENT_ID is set
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")  # "sandbox" or "live"
+paypal_enabled = bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
 
 
 SERVICE_FILE = Path(__file__).resolve()
@@ -149,6 +156,186 @@ def submit_payment(request_id: str, amount: int, method: PaymentMethod, auto_app
             _save_json(PAYMENT_STORAGE_FILE, payments)
 
     return result
+
+
+def get_stripe_config() -> dict:
+    """Return Stripe publishable key (or empty if not configured)."""
+    return {
+        "publishable_key": STRIPE_PUBLISHABLE_KEY,
+        "mode": STRIPE_MODE,
+        "enabled": stripe is not None,
+    }
+
+
+def create_stripe_payment_intent(payment_id: str, amount: int, request_id: str) -> dict:
+    """Create a Stripe PaymentIntent. Returns mock client_secret if Stripe not configured."""
+    if not stripe:
+        mock_intent_id = f"mock_pi_{payment_id}"
+        payments = _load_json(PAYMENT_STORAGE_FILE)
+        if payment_id in payments:
+            payments[payment_id]["stripe_payment_intent_id"] = mock_intent_id
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "stripe_intent_created",
+                "stripe_payment_intent_id": mock_intent_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+        return {
+            "client_secret": f"mock_secret_{payment_id}",
+            "payment_intent_id": mock_intent_id,
+            "mock": True,
+        }
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=amount * 100,  # cents
+            currency="usd",
+            metadata={"request_id": request_id, "payment_id": payment_id},
+            automatic_payment_methods={"enabled": True},
+        )
+        payments = _load_json(PAYMENT_STORAGE_FILE)
+        if payment_id in payments:
+            payments[payment_id]["stripe_payment_intent_id"] = intent.id
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "stripe_intent_created",
+                "stripe_payment_intent_id": intent.id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+        return {
+            "client_secret": intent.client_secret,
+            "payment_intent_id": intent.id,
+            "mock": False,
+        }
+    except Exception as e:
+        return {
+            "client_secret": f"mock_secret_{payment_id}",
+            "payment_intent_id": f"mock_pi_{payment_id}",
+            "mock": True,
+            "error": str(e),
+        }
+
+
+def create_paypal_order(payment_id: str, amount: int, request_id: str) -> dict:
+    """Create a PayPal order. Returns mock approval URL if PayPal not configured."""
+    if not paypal_enabled:
+        return {
+            "order_id": f"mock_order_{payment_id}",
+            "approval_url": None,
+            "mock": True,
+        }
+    try:
+        import httpx
+        import base64
+
+        auth = base64.b64encode(
+            f"{PAYPAL_CLIENT_ID}:{PAYPAL_CLIENT_SECRET}".encode()
+        ).decode()
+        base_url = (
+            "https://api-m.sandbox.paypal.com"
+            if PAYPAL_MODE == "sandbox"
+            else "https://api-m.paypal.com"
+        )
+        with httpx.Client() as client:
+            token_resp = client.post(
+                f"{base_url}/v1/oauth2/token",
+                headers={"Authorization": f"Basic {auth}"},
+                data={"grant_type": "client_credentials"},
+            )
+            token_resp.raise_for_status()
+            access_token = token_resp.json()["access_token"]
+
+            order_resp = client.post(
+                f"{base_url}/v2/checkout/orders",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "intent": "CAPTURE",
+                    "purchase_units": [{
+                        "reference_id": payment_id,
+                        "description": f"Marketing campaign {request_id}",
+                        "amount": {
+                            "currency_code": "USD",
+                            "value": f"{amount:.2f}",
+                        },
+                    }],
+                },
+            )
+            order_resp.raise_for_status()
+            order_data = order_resp.json()
+            approval_link = next(
+                (link["href"] for link in order_data.get("links", [])
+                 if link["rel"] == "approve"),
+                None,
+            )
+            return {
+                "order_id": order_data["id"],
+                "approval_url": approval_link,
+                "mock": False,
+            }
+    except Exception as e:
+        return {
+            "order_id": f"mock_order_{payment_id}",
+            "approval_url": None,
+            "mock": True,
+            "error": str(e),
+        }
+
+
+def capture_paypal_order(order_id: str, payment_id: str) -> dict:
+    """Capture a PayPal order. Returns mock if PayPal not configured."""
+    if not paypal_enabled:
+        return {
+            "status": "COMPLETED",
+            "capture_id": f"mock_capture_{payment_id}",
+            "mock": True,
+        }
+    try:
+        import httpx
+        import base64
+
+        auth = base64.b64encode(
+            f"{PAYPAL_CLIENT_ID}:{PAYPAL_CLIENT_SECRET}".encode()
+        ).decode()
+        base_url = (
+            "https://api-m.sandbox.paypal.com"
+            if PAYPAL_MODE == "sandbox"
+            else "https://api-m.paypal.com"
+        )
+        with httpx.Client() as client:
+            token_resp = client.post(
+                f"{base_url}/v1/oauth2/token",
+                headers={"Authorization": f"Basic {auth}"},
+                data={"grant_type": "client_credentials"},
+            )
+            token_resp.raise_for_status()
+            access_token = token_resp.json()["access_token"]
+
+            capture_resp = client.post(
+                f"{base_url}/v2/checkout/orders/{order_id}/capture",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+            )
+            capture_resp.raise_for_status()
+            capture_data = capture_resp.json()
+            return {
+                "status": capture_data.get("status", "COMPLETED"),
+                "capture_id": capture_data.get("purchase_units", [{}])[0]
+                    .get("payments", {})
+                    .get("captures", [{}])[0]
+                    .get("id", ""),
+                "mock": False,
+            }
+    except Exception as e:
+        return {
+            "status": "FAILED",
+            "capture_id": "",
+            "mock": True,
+            "error": str(e),
+        }
 
 
 def _get_payment_instructions(method: PaymentMethod) -> str:

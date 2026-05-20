@@ -132,3 +132,48 @@ export async function approvePayment(paymentId: string) {
   }
   return response.json()
 }
+
+export async function getStripeConfig() {
+  const response = await fetch(`${API_BASE}/payments/stripe/config`)
+  if (!response.ok) throw new Error("Failed to fetch Stripe config")
+  return response.json()
+}
+
+export async function createStripePaymentIntent(paymentId: string, amount: number, requestId: string) {
+  const response = await fetch(`${API_BASE}/payments/stripe/create-payment-intent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ payment_id: paymentId, amount, request_id: requestId }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to create payment intent")
+  }
+  return response.json()
+}
+
+export async function createPayPalOrder(paymentId: string, amount: number, requestId: string) {
+  const response = await fetch(`${API_BASE}/payments/paypal/create-order`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ payment_id: paymentId, amount, request_id: requestId }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to create PayPal order")
+  }
+  return response.json()
+}
+
+export async function capturePayPalOrder(orderId: string, paymentId: string) {
+  const response = await fetch(`${API_BASE}/payments/paypal/capture-order`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: orderId, payment_id: paymentId }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Failed to capture PayPal order")
+  }
+  return response.json()
+}

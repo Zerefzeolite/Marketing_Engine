@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { submitPayment, uploadReceipt } from "../../lib/api/payment"
+import { StripePaymentForm } from "./StripePaymentForm"
+import { PayPalButton } from "./PayPalButton"
 
 type PaymentMethod = "LOCAL_BANK_TRANSFER" | "CASH" | "STRIPE" | "PAYPAL"
 
@@ -50,7 +52,8 @@ export function PaymentStep({
   onBack 
 }: PaymentStepProps) {
   const [method, setMethod] = useState<PaymentMethod>("LOCAL_BANK_TRANSFER")
-  const [step, setStep] = useState<"select" | "instructions" | "receipt" | "submit">("select")
+  const [step, setStep] = useState<"select" | "instructions" | "receipt" | "submit" | "online_payment">("select")
+  const [paymentError, setPaymentError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [paymentId, setPaymentId] = useState("")
@@ -96,6 +99,7 @@ export function PaymentStep({
     try {
       setIsSubmitting(true)
       setError("")
+      setPaymentError("")
       const result = await submitPayment({
         request_id: requestId,
         amount,
@@ -104,29 +108,34 @@ export function PaymentStep({
       setPaymentId(result.payment_id)
       setInstructions(result.payment_instructions || "")
       
-      // For bank transfer/cash, require receipt upload
       if (method === "LOCAL_BANK_TRANSFER" || method === "CASH") {
         setStep("receipt")
       } else {
-        // For online payments, submit directly
-        setStep("submit")
-        onComplete(result.payment_id, result.status, result.payment_instructions || "", result.expected_wait_time || "")
+        setStep("online_payment")
       }
     } catch (err) {
       console.warn("Payment API unavailable, continuing with mock:", err)
       const mockPaymentId = `PAY-${Date.now().toString(36).toUpperCase()}`
       setPaymentId(mockPaymentId)
-      setInstructions("Mock payment instructions - Bank: Demo Bank, Account: 123456789")
+      setInstructions("Mock payment instructions")
       
       if (method === "LOCAL_BANK_TRANSFER" || method === "CASH") {
         setStep("receipt")
       } else {
-        setStep("submit")
-        onComplete(mockPaymentId, "PENDING", "Mock payment - continue anyway", "Demo mode")
+        setStep("online_payment")
       }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleOnlinePaymentSuccess() {
+    setStep("submit")
+    onComplete(paymentId, "PENDING", instructions, "Instant (processing)")
+  }
+
+  function handleOnlinePaymentError(msg: string) {
+    setPaymentError(msg)
   }
 
   async function handleUploadAndSubmit() {
@@ -267,59 +276,103 @@ export function PaymentStep({
             </div>
           )}
 
-          {method === "STRIPE" && (
-            <div className="stripe-notice">
-              <p>Stripe integration coming soon. Please use bank transfer for now.</p>
-            </div>
-          )}
+          {method === "LOCAL_BANK_TRANSFER" || method === "CASH" ? (
+            <>
+              <div className="amount-display">
+                <span>Amount to Pay:</span>
+                <span className="pay-amount">{currencySymbol}{amount.toLocaleString()}</span>
+              </div>
 
-          {method === "PAYPAL" && (
-            <div className="paypal-notice">
-              <p>PayPal integration coming soon. Please use bank transfer for now.</p>
-            </div>
-          )}
+              <p className="instruction-note">
+                Make payment using your selected method, then upload your receipt below.
+              </p>
+              
+              {isDevMode && (
+                <button 
+                  className="dev-auto-approve"
+                  onClick={handleDevAutoApprove}
+                  style={{ marginBottom: "1rem", padding: "0.5rem 1rem", background: "#7c3aed", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                >
+                  [DEV] Auto-Approve Payment
+                </button>
+              )}
 
+              <div className="receipt-upload">
+                <label>Upload Payment Receipt *</label>
+                <p className="receipt-hint">Upload a photo or scan of your payment receipt</p>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                />
+                {receiptFile && <p className="file-selected">Selected: {receiptFile.name}</p>}
+              </div>
+
+              {error && <p className="error">{error}</p>}
+
+              <div className="actions">
+                <button className="btn-back" onClick={() => setStep("instructions")}>← Back</button>
+                <button 
+                  className="btn-primary" 
+                  onClick={handleUploadAndSubmit} 
+                  disabled={!receiptFile || isUploading}
+                >
+                  {isUploading ? "Submitting..." : "Submit for Review"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="amount-display">
+                <span>Amount to Pay:</span>
+                <span className="pay-amount">{currencySymbol}{amount.toLocaleString()}</span>
+              </div>
+              <p className="instruction-note">Click Continue to proceed with online payment.</p>
+              <div className="actions">
+                <button className="btn-back" onClick={() => setStep("instructions")}>← Back</button>
+                <button className="btn-primary" onClick={handleSubmitPayment} disabled={isSubmitting}>
+                  {isSubmitting ? "Processing..." : "Continue to Payment →"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: Online Payment (Stripe/PayPal) */}
+      {step === "online_payment" && (
+        <div className="online-payment-card">
+          <h3>{method === "STRIPE" ? "Credit Card Payment" : "PayPal Payment"}</h3>
+          
           <div className="amount-display">
-            <span>Amount to Pay:</span>
+            <span>Total</span>
             <span className="pay-amount">{currencySymbol}{amount.toLocaleString()}</span>
           </div>
 
-<p className="instruction-note">
-            Make payment using your selected method, then upload your receipt below.
-          </p>
-          
-          {isDevMode && (
-            <button 
-              className="dev-auto-approve"
-              onClick={handleDevAutoApprove}
-              style={{ marginBottom: "1rem", padding: "0.5rem 1rem", background: "#7c3aed", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}
-            >
-              [DEV] Auto-Approve Payment
-            </button>
+          {method === "STRIPE" && (
+            <StripePaymentForm
+              paymentId={paymentId}
+              amount={amount}
+              requestId={requestId}
+              onSuccess={handleOnlinePaymentSuccess}
+              onError={handleOnlinePaymentError}
+            />
           )}
 
-          <div className="receipt-upload">
-            <label>Upload Payment Receipt *</label>
-            <p className="receipt-hint">Upload a photo or scan of your payment receipt</p>
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+          {method === "PAYPAL" && (
+            <PayPalButton
+              paymentId={paymentId}
+              amount={amount}
+              requestId={requestId}
+              onSuccess={handleOnlinePaymentSuccess}
+              onError={handleOnlinePaymentError}
             />
-            {receiptFile && <p className="file-selected">Selected: {receiptFile.name}</p>}
-          </div>
+          )}
 
-          {error && <p className="error">{error}</p>}
+          {paymentError && <p className="error">{paymentError}</p>}
 
           <div className="actions">
             <button className="btn-back" onClick={() => setStep("instructions")}>← Back</button>
-            <button 
-              className="btn-primary" 
-              onClick={handleUploadAndSubmit} 
-              disabled={!receiptFile || isUploading}
-            >
-              {isUploading ? "Submitting..." : "Submit for Review"}
-            </button>
           </div>
         </div>
       )}

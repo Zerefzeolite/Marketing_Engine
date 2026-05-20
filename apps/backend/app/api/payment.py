@@ -120,7 +120,109 @@ async def get_all_payments():
     return payment_service.get_all_payments()
 
 
-# Stripe webhook endpoint (scaffolded, only active if STRIPE_WEBHOOK_SECRET is set)
+# Stripe config endpoint
+@router.get("/stripe/config")
+async def stripe_config():
+    """Return Stripe publishable key for frontend."""
+    from ..services.payment_service import get_stripe_config as _get_stripe_config
+    return _get_stripe_config()
+
+
+# Create Stripe PaymentIntent
+@router.post("/stripe/create-payment-intent")
+async def create_payment_intent(payload: dict):
+    """Create a Stripe PaymentIntent for a payment."""
+    from ..services.payment_service import (
+        create_stripe_payment_intent, submit_payment, _load_json,
+        PAYMENT_STORAGE_FILE, PaymentMethod,
+    )
+
+    payment_id = payload.get("payment_id", "")
+    amount = payload.get("amount", 0)
+    request_id = payload.get("request_id", "")
+
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="payment_id required")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+
+    # Verify payment exists
+    payments = _load_json(PAYMENT_STORAGE_FILE)
+    if payment_id not in payments:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    result = create_stripe_payment_intent(payment_id, amount, request_id)
+    return {"payment_id": payment_id, **result}
+
+
+# Create PayPal order
+@router.post("/paypal/create-order")
+async def create_paypal_order_endpoint(payload: dict):
+    """Create a PayPal order for a payment."""
+    from ..services.payment_service import (
+        create_paypal_order, _load_json, PAYMENT_STORAGE_FILE,
+    )
+
+    payment_id = payload.get("payment_id", "")
+    amount = payload.get("amount", 0)
+    request_id = payload.get("request_id", "")
+
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="payment_id required")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+
+    payments = _load_json(PAYMENT_STORAGE_FILE)
+    if payment_id not in payments:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    result = create_paypal_order(payment_id, amount, request_id)
+    return {"payment_id": payment_id, **result}
+
+
+# Capture PayPal order
+@router.post("/paypal/capture-order")
+async def capture_paypal_order_endpoint(payload: dict):
+    """Capture a PayPal order after buyer approval."""
+    from ..services.payment_service import (
+        capture_paypal_order as _capture, _load_json, _save_json,
+        PAYMENT_STORAGE_FILE, PaymentStatus, datetime, timezone,
+    )
+
+    order_id = payload.get("order_id", "")
+    payment_id = payload.get("payment_id", "")
+
+    if not order_id:
+        raise HTTPException(status_code=400, detail="order_id required")
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="payment_id required")
+
+    result = _capture(order_id, payment_id)
+
+    # On success, mark payment as APPROVED and auto-execute
+    if result.get("status") == "COMPLETED":
+        payments = _load_json(PAYMENT_STORAGE_FILE)
+        if payment_id in payments:
+            payments[payment_id]["status"] = PaymentStatus.APPROVED.value
+            payments[payment_id]["verified_at"] = datetime.now(timezone.utc).isoformat()
+            payments[payment_id].setdefault("audit_trail", []).append({
+                "event": "paypal_capture_completed",
+                "paypal_order_id": order_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            _save_json(PAYMENT_STORAGE_FILE, payments)
+
+            from ..services.payment_service import _auto_execute_campaign
+            auto_exec = _auto_execute_campaign(
+                payments[payment_id].get("request_id", "")
+            )
+            result["auto_executed"] = auto_exec.get("success", False)
+            result["execution_id"] = auto_exec.get("execution_id", "")
+
+    return {"payment_id": payment_id, **result}
+
+
+# Stripe webhook endpoint (only active if STRIPE_WEBHOOK_SECRET is set)
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook for payment confirmation."""

@@ -3,4 +3,5 @@ pytest>=8.0.0
 python-multipart>=0.0.9
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0  # For PostgreSQL (dev only; use psycopg3 in production)
+stripe>=7.0.0            # Stripe payment processing (optional — graceful fallback)
 # Note: use "postgresql://user:pass@host/db" for DATABASE_URL
