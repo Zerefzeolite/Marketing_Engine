@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 6 Portal Directions</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --ink: #10212f;
+      --muted: #5c6f7b;
+      --card: #ffffff;
+      --line: #d7e0e6;
+      --accent: #0e7c86;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      background: linear-gradient(180deg, #eef3f6 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 40px; }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    .sub { margin: 0 0 22px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(16, 33, 47, 0.06);
+      overflow: hidden;
+    }
+    .head { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+    .head h2 { margin: 0; font-size: 18px; }
+    .head p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+    .mock { padding: 12px; }
+    .bar { height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #f7fbfc; margin-bottom: 10px; }
+    .row { display: flex; gap: 8px; }
+    .pill { flex: 1; height: 58px; border: 1px dashed #a8b9c4; border-radius: 10px; background: #fcfefe; }
+    .panel { height: 124px; border: 1px dashed #a8b9c4; border-radius: 10px; margin-top: 8px; background: #fcfefe; }
+    .split { display: flex; gap: 8px; }
+    .left { width: 34%; height: 204px; border: 1px dashed #a8b9c4; border-radius: 10px; background: #f8fbfd; }
+    .right { width: 66%; }
+    .mini { height: 60px; border: 1px dashed #a8b9c4; border-radius: 10px; background: #fcfefe; margin-bottom: 8px; }
+    .footer {
+      margin-top: 18px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #e6f6f7;
+      color: #0a5e65;
+      font-size: 12px;
+      border: 1px solid #bfe6e9;
+    }
+    .cta {
+      margin-top: 18px;
+      padding: 12px 14px;
+      background: #e9f4f5;
+      border: 1px solid #c8e2e4;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .cta strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Phase 6 Product Direction Mockups</h1>
+    <p class="sub">Three layout directions for the quality and operations portal before full frontend launch.</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="head">
+          <h2>A. Executive Command Center</h2>
+          <p>KPI-first layout for leadership and readiness reviews.</p>
+          <span class="tag">Decision-oriented</span>
+        </div>
+        <div class="mock">
+          <div class="bar"></div>
+          <div class="row"><div class="pill"></div><div class="pill"></div><div class="pill"></div></div>
+          <div class="panel"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2>B. Operations Workbench</h2>
+          <p>Triage and action flow for engineers and operators.</p>
+          <span class="tag">Execution-oriented</span>
+        </div>
+        <div class="mock">
+          <div class="split">
+            <div class="left"></div>
+            <div class="right">
+              <div class="mini"></div>
+              <div class="mini"></div>
+              <div class="mini" style="height:72px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2>C. Client Confidence Report</h2>
+          <p>Presentation view for stakeholder communication.</p>
+          <span class="tag">Narrative-oriented</span>
+        </div>
+        <div class="mock">
+          <div class="mini"></div>
+          <div class="row"><div class="panel" style="margin-top:0; height:112px"></div><div class="panel" style="margin-top:0; height:112px"></div></div>
+          <div class="mini" style="margin-top:8px"></div>
+        </div>
+      </section>
+    </div>
+
+    <p class="cta"><strong>Review ask:</strong> Reply with A, B, C, or a hybrid (for example: "A header + B workflow panel").</p>
+    <p class="footer">Mockup file: docs/mockups/phase6-portal-directions.html</p>
+  </div>
+</body>
+</html>

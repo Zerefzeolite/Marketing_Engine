@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 6 Portal Hybrid Mockup</title>
+  <style>
+    :root {
+      --bg-canvas: #f2f5f8;
+      --bg-panel: #ffffff;
+      --bg-nav: #0f2742;
+      --bg-subtle: #eef3f8;
+      --text-primary: #132233;
+      --text-secondary: #4d6276;
+      --line: #d8e2eb;
+      --accent: #1f6f95;
+      --accent-soft: #d9ecf7;
+      --ok: #21835e;
+      --warn: #a56d12;
+      --danger: #b1352f;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-md: 0 10px 30px rgba(13, 28, 49, 0.08);
+      --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 550px at 90% -30%, rgba(31, 111, 149, 0.2), transparent 60%),
+        radial-gradient(900px 450px at 0% 0%, rgba(33, 131, 94, 0.12), transparent 58%),
+        var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+    }
+
+    .top-strip {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      border-bottom: 1px solid #264462;
+      background: linear-gradient(135deg, #0e243e, var(--bg-nav));
+      color: #eaf3fb;
+    }
+
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .phase-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab {
+      border: 1px solid #446a8b;
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: #d6e7f7;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab.active {
+      border-color: #6eb2da;
+      background: rgba(110, 178, 218, 0.2);
+      color: #ffffff;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - 62px);
+    }
+
+    .left-rail {
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, #f8fbff 0%, #f2f7fb 100%);
+      padding: 18px 14px;
+    }
+
+    .label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 8px 10px;
+    }
+
+    .domain-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .domain {
+      margin-bottom: 7px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .domain.active {
+      border-color: #b7d7ea;
+      background: var(--accent-soft);
+      color: #0f3850;
+    }
+
+    .content {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .state-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .state-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-subtle);
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .state-body {
+      padding: 16px;
+    }
+
+    h1, h2 {
+      margin: 0 0 8px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    h2 {
+      font-size: 18px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meta {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      background: #f9fcff;
+    }
+
+    .meta strong {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #567086;
+      margin-bottom: 3px;
+    }
+
+    .check-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      background: #fbfdff;
+      font-size: 14px;
+    }
+
+    .status {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .status.pass { color: var(--ok); }
+    .status.progress { color: var(--warn); }
+    .status.fail { color: var(--danger); }
+
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .actions button {
+      border: 1px solid #5f9cc0;
+      border-radius: 999px;
+      background: #e6f3fb;
+      color: #174861;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 12px;
+      cursor: default;
+    }
+
+    .readiness {
+      border-left: 6px solid var(--danger);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: #fff6f5;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .left-rail {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="top-strip">
+    <div class="brand">Phase 6 Portal Hybrid Mockup</div>
+    <nav class="phase-tabs" aria-label="Top-level phase navigation">
+      <span class="tab active">Overview</span>
+      <span class="tab">Assessment</span>
+      <span class="tab">Findings</span>
+      <span class="tab">Readiness</span>
+    </nav>
+  </header>
+
+  <div class="shell">
+    <aside class="left-rail" aria-label="Domain navigation within Assessment">
+      <p class="label">Assessment Domains</p>
+      <ul class="domain-list">
+        <li class="domain">UI/UX</li>
+        <li class="domain active">Compliance and Security</li>
+        <li class="domain">Backend Functionality</li>
+        <li class="domain">Client and Contact Simulation</li>
+        <li class="domain">Efficiency and Workflow</li>
+        <li class="domain">Website and Portal</li>
+      </ul>
+    </aside>
+
+    <main class="content">
+      <section class="state-card" aria-label="Overview state">
+        <div class="state-head">State 1 of 4</div>
+        <div class="state-body">
+          <h1>Overview</h1>
+          <p>Current release readiness: 82/100. Open critical findings: 2. Closed in the last 7 days: 7.</p>
+        </div>
+      </section>
+
+      <section class="state-card" aria-label="Assessment state">
+        <div class="state-head">State 2 of 4</div>
+        <div class="state-body">
+          <h2>Assessment - Compliance and Security</h2>
+          <p>Owner: Security Ops. Last updated: 2026-04-11. Domain readiness: 79%.</p>
+
+          <div class="meta-grid">
+            <div class="meta">
+              <strong>Evidence</strong>
+              <span>consent-log-2026-04-11.json</span>
+            </div>
+            <div class="meta">
+              <strong>Evidence</strong>
+              <span>endpoint-redaction-screenshot.png</span>
+            </div>
+            <div class="meta">
+              <strong>Findings</strong>
+              <span>Critical 1 | Non-critical 3</span>
+            </div>
+          </div>
+
+          <div class="check-row">
+            <span>Consent enforcement</span>
+            <span class="status pass">PASS</span>
+          </div>
+          <div class="check-row">
+            <span>Audit trail integrity</span>
+            <span class="status progress">IN PROGRESS</span>
+          </div>
+          <div class="check-row">
+            <span>Sensitive data exposure</span>
+            <span class="status fail">FAIL</span>
+          </div>
+
+          <div class="actions" aria-label="Finding workflow actions">
+            <button type="button">Create finding</button>
+            <button type="button">Record retest</button>
+            <button type="button">Request review</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="state-card" aria-label="Findings state">
+        <div class="state-head">State 3 of 4</div>
+        <div class="state-body">
+          <h2>Findings</h2>
+          <p>Critical queue: P1 consent-state mismatch pending retest evidence attachment.</p>
+        </div>
+      </section>
+
+      <section class="state-card" aria-label="Readiness state">
+        <div class="state-head">State 4 of 4</div>
+        <div class="state-body">
+          <h2>Readiness</h2>
+          <div class="readiness">
+            <p>Go/No-Go decision: NO-GO until all P0/P1 findings have PASS retest evidence.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
