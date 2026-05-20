@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime
 from typing import Literal
 
@@ -332,57 +333,117 @@ def get_pending_reviews() -> list[dict]:
 
 @router.post("/{session_id}/execute")
 def execute_campaign_by_session(session_id: str) -> dict:
-    """Execute campaign using session data to select contacts."""
+    """Execute campaign using session data — dispatches actual email/SMS messages."""
     try:
-        # Load session to get execution criteria
         from app.services import campaign_service
         sessions = campaign_service._load_sessions()
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
-        
         session = sessions[session_id]
-        
-        # Get reach limit from session
+
         reach_limit = session.get("estimated_reachable", 100)
-        
-        # Select contacts based on session criteria
+
         from app.services import contact_service
         contacts = contact_service.list_contacts(
             limit=reach_limit,
             offset=0,
             include_opt_out=False,
         )
-        
         if not contacts:
             raise HTTPException(status_code=400, detail="No contacts found for execution")
-        
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    # Create execution record (this also stores contact IDs)
+
     exec_record = execution_service.start_execution(
-        campaign_id=session_id,  # Use session_id as campaign_id for tracking
+        campaign_id=session_id,
         session_id=session_id,
     )
-    
-    # Get stored contact IDs
-    contact_ids = execution_service.get_execution_contacts(exec_record["execution_id"])
-    
-    contacts_attempted = len(contact_ids) if contact_ids else 0
-    contacts_delivered = contacts_attempted  # Assume all delivered for now
-    
+    contact_ids = execution_service.get_execution_contacts(exec_record["execution_id"]) or []
+
+    template_content = session.get("template_content", "")
+    template_type = session.get("template_type", "email")
+    channel_split = session.get("channel_split", "email: 100%")
+
+    contacts_delivered = 0
+    errors: list[str] = []
+    email_sent = 0
+    sms_sent = 0
+
+    async def _dispatch_all():
+        nonlocal contacts_delivered, errors, email_sent, sms_sent
+        from app.services.email_service import email_service
+        from app.services.sms_service import sms_service
+        from app.services import analytics_service
+
+        for cid in contact_ids:
+            contact = contact_service.get_contact(cid)
+            if not contact:
+                continue
+
+            preferred = contact.get("preferred_channel", "email")
+            sent_any = False
+
+            if preferred in ("email", "both"):
+                email = contact.get("email", "")
+                if email:
+                    try:
+                        result = await email_service.send_email(
+                            to_email=email,
+                            subject=f"Campaign from Marketing Engine",
+                            html_content=template_content or "<p>Your campaign message</p>",
+                        )
+                        if result.get("status") in ("sent", "mock"):
+                            sent_any = True
+                            email_sent += 1
+                            analytics_service.record_event(session_id, cid, "SENT")
+                        else:
+                            errors.append(f"{cid}: Email failed - {result.get('error', 'unknown')}")
+                            analytics_service.record_event(session_id, cid, "FAILED")
+                    except Exception as e:
+                        errors.append(f"{cid}: Email exception - {str(e)}")
+                        analytics_service.record_event(session_id, cid, "FAILED")
+
+            if preferred in ("sms", "both"):
+                phone = contact.get("phone", "")
+                if phone:
+                    sms_body = template_content[:160] if template_content else "Your campaign message"
+                    try:
+                        result = await sms_service.send_sms(phone, sms_body)
+                        if result.get("status") in ("sent", "mock"):
+                            sent_any = True
+                            sms_sent += 1
+                            analytics_service.record_event(session_id, cid, "SENT")
+                        elif result.get("status") == "skipped":
+                            pass
+                        else:
+                            errors.append(f"{cid}: SMS failed - {result.get('error', 'unknown')}")
+                            analytics_service.record_event(session_id, cid, "FAILED")
+                    except Exception as e:
+                        errors.append(f"{cid}: SMS exception - {str(e)}")
+                        analytics_service.record_event(session_id, cid, "FAILED")
+
+            if sent_any:
+                contacts_delivered += 1
+
+    asyncio.run(_dispatch_all())
+
     execution_service.complete_execution(
         execution_id=exec_record["execution_id"],
-        contacts_attempted=contacts_attempted,
+        contacts_attempted=len(contact_ids),
         contacts_delivered=contacts_delivered,
-        errors=[],
+        errors=errors[:10],
     )
-    
+
     return {
         "status": "executed",
         "campaign_id": session_id,
         "execution_id": exec_record["execution_id"],
+        "contacts_attempted": len(contact_ids),
         "contacts_delivered": contacts_delivered,
+        "contacts_failed": len(errors),
+        "email_sent": email_sent,
+        "sms_sent": sms_sent,
+        "errors": errors[:10],
     }
