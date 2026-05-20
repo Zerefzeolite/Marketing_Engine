@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, cast
 
 from app.models.intake import IntakeSubmitRequest, IntakeSubmitResponse
-from app.services.intake_service import estimate_summary, new_request_id, recommend_summary
+from app.services.intake_service import estimate_summary, new_request_id, recommend_summary, save_submission
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 
@@ -36,6 +36,8 @@ class IntakeRecommendResponse(BaseModel):
 @router.post("/submit", response_model=IntakeSubmitResponse)
 def submit(payload: IntakeSubmitRequest) -> IntakeSubmitResponse:
     request_id = new_request_id()
+    payload_dict = payload.model_dump()
+    save_submission(request_id, payload_dict)
     summary = {
         "business_name": payload.business_name,
         "preferred_channel": payload.preferred_channel,
