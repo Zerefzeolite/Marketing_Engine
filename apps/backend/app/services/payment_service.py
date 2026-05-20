@@ -608,12 +608,23 @@ def execute_campaign(request_id: str, campaign_data: dict) -> dict:
         )
         execution_id = exec_record["execution_id"]
 
-        # Complete execution (stub - real dispatch is in campaigns_v2.py)
+        contact_ids = exec_svc.get_execution_contacts(execution_id) or []
+
+        session = {
+            "template_content": campaign_data.get("template_content", ""),
+            "estimated_reachable": campaign_data.get("target_count", 100),
+        }
+        stats = exec_svc.dispatch_campaign(
+            session_id=request_id,
+            session=session,
+            contact_ids=contact_ids,
+        )
+
         exec_svc.complete_execution(
             execution_id=execution_id,
-            contacts_attempted=campaign_data.get("target_count", 0),
-            contacts_delivered=campaign_data.get("target_count", 0),
-            errors=[],
+            contacts_attempted=len(contact_ids),
+            contacts_delivered=stats["contacts_delivered"],
+            errors=stats["errors"],
         )
 
         return {
@@ -622,6 +633,9 @@ def execute_campaign(request_id: str, campaign_data: dict) -> dict:
             "request_id": request_id,
             "status": ExecutionStatus.COMPLETED,
             "message": "Campaign executed successfully.",
+            "contacts_delivered": stats["contacts_delivered"],
+            "email_sent": stats["email_sent"],
+            "sms_sent": stats["sms_sent"],
         }
     except Exception as e:
         return {
