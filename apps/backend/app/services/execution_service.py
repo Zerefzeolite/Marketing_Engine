@@ -163,3 +163,90 @@ def complete_execution(
     _save_json(EXECUTIONS_FILE, executions)
     
     return execution
+
+
+def dispatch_campaign(
+    session_id: str,
+    session: dict,
+    contact_ids: list[str],
+) -> dict:
+    """
+    Dispatch email/SMS to contacts for a campaign session.
+
+    Returns delivery stats dict with keys:
+      contacts_delivered, contacts_failed, email_sent, sms_sent, errors
+    """
+    import asyncio
+
+    contacts_delivered = 0
+    errors: list[str] = []
+    email_sent = 0
+    sms_sent = 0
+
+    async def _dispatch_all():
+        nonlocal contacts_delivered, errors, email_sent, sms_sent
+        from app.services.email_service import email_service
+        from app.services.sms_service import sms_service
+        from app.services import analytics_service, contact_service
+
+        template_content = session.get("template_content", "")
+
+        for cid in contact_ids:
+            contact = contact_service.get_contact(cid)
+            if not contact:
+                continue
+
+            preferred = contact.get("preferred_channel", "email")
+            sent_any = False
+
+            if preferred in ("email", "both"):
+                email = contact.get("email", "")
+                if email:
+                    try:
+                        result = await email_service.send_email(
+                            to_email=email,
+                            subject="Campaign from Marketing Engine",
+                            html_content=template_content or "<p>Your campaign message</p>",
+                        )
+                        if result.get("status") in ("sent", "mock"):
+                            sent_any = True
+                            email_sent += 1
+                            analytics_service.record_event(session_id, cid, "SENT")
+                        else:
+                            errors.append(f"{cid}: Email failed - {result.get('error', 'unknown')}")
+                            analytics_service.record_event(session_id, cid, "FAILED")
+                    except Exception as e:
+                        errors.append(f"{cid}: Email exception - {str(e)}")
+                        analytics_service.record_event(session_id, cid, "FAILED")
+
+            if preferred in ("sms", "both"):
+                phone = contact.get("phone", "")
+                if phone:
+                    sms_body = template_content[:160] if template_content else "Your campaign message"
+                    try:
+                        result = await sms_service.send_sms(phone, sms_body)
+                        if result.get("status") in ("sent", "mock"):
+                            sent_any = True
+                            sms_sent += 1
+                            analytics_service.record_event(session_id, cid, "SENT")
+                        elif result.get("status") == "skipped":
+                            pass
+                        else:
+                            errors.append(f"{cid}: SMS failed - {result.get('error', 'unknown')}")
+                            analytics_service.record_event(session_id, cid, "FAILED")
+                    except Exception as e:
+                        errors.append(f"{cid}: SMS exception - {str(e)}")
+                        analytics_service.record_event(session_id, cid, "FAILED")
+
+            if sent_any:
+                contacts_delivered += 1
+
+    asyncio.run(_dispatch_all())
+
+    return {
+        "contacts_delivered": contacts_delivered,
+        "contacts_failed": len(errors),
+        "email_sent": email_sent,
+        "sms_sent": sms_sent,
+        "errors": errors[:10],
+    }

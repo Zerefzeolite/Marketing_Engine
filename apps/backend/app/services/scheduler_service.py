@@ -87,8 +87,8 @@ def mark_failed(campaign_id: str) -> dict | None:
 
 
 def execute_due_campaigns() -> list[dict]:
-    """Find and execute all due campaigns."""
-    from app.services import dispatch_service, execution_service
+    """Find and execute all due campaigns with actual message dispatch."""
+    from app.services import dispatch_service, execution_service, campaign_service, contact_service
 
     due = get_due_campaigns()
     results = []
@@ -98,15 +98,51 @@ def execute_due_campaigns() -> list[dict]:
         try:
             campaign = dispatch_service.get_campaign_for_dispatch(campaign_id)
             dispatch_service.ensure_dispatch_gate(campaign)
-            exec_record = execution_service.start_execution(campaign_id)
+
+            sessions = campaign_service._load_sessions()
+            session = sessions.get(campaign_id)
+            if not session:
+                session = next(
+                    (s for sid, s in sessions.items() if sid.replace("SES-", "CMP-") == campaign_id),
+                    None,
+                )
+            if not session:
+                raise ValueError(f"Session not found for campaign {campaign_id}")
+
+            reach_limit = session.get("estimated_reachable", 100)
+            contacts = contact_service.list_contacts(
+                limit=reach_limit, offset=0, include_opt_out=False,
+            )
+            if not contacts:
+                raise ValueError(f"No contacts available for campaign {campaign_id}")
+
+            exec_record = execution_service.start_execution(
+                campaign_id=campaign_id,
+                session_id=session.get("id", campaign_id),
+            )
+            contact_ids = execution_service.get_execution_contacts(exec_record["execution_id"]) or []
+
+            stats = execution_service.dispatch_campaign(
+                session_id=session.get("id", campaign_id),
+                session=session,
+                contact_ids=contact_ids,
+            )
+
             execution_service.complete_execution(
                 execution_id=exec_record["execution_id"],
-                contacts_attempted=0,
-                contacts_delivered=0,
-                errors=[],
+                contacts_attempted=len(contact_ids),
+                contacts_delivered=stats["contacts_delivered"],
+                errors=stats["errors"],
             )
             mark_completed(campaign_id)
-            results.append({"campaign_id": campaign_id, "status": "completed"})
+            results.append({
+                "campaign_id": campaign_id,
+                "status": "completed",
+                "contacts_attempted": len(contact_ids),
+                "contacts_delivered": stats["contacts_delivered"],
+                "email_sent": stats["email_sent"],
+                "sms_sent": stats["sms_sent"],
+            })
         except Exception as e:
             mark_failed(campaign_id)
             results.append({"campaign_id": campaign_id, "status": "failed", "error": str(e)})
