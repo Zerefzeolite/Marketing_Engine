@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DomainScorecard } from "../../components/quality/DomainScorecard"
 import { getFindings } from "../../lib/api/assessment"
 import { buildDomainRows } from "../../lib/quality-gate"
@@ -10,9 +10,25 @@ import {
 } from "../../lib/contracts/assessment"
 
 export default function QualityGatePage() {
-  const [findings] = useState<AssessmentFinding[]>([])
+  const [findings, setFindings] = useState<AssessmentFinding[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [domainFilter, setDomainFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+  useEffect(() => {
+    setLoading(true)
+    setFetchError(null)
+    getFindings()
+      .then((data) => {
+        setFindings(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setFetchError(err instanceof Error ? err.message : "Failed to load findings")
+        setLoading(false)
+      })
+  }, [])
 
   let grouped: ReturnType<typeof buildDomainRows> = []
 
@@ -31,6 +47,27 @@ export default function QualityGatePage() {
       return false
     return true
   })
+
+  if (loading) {
+    return (
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
+        <h1>Quality Gate</h1>
+        <p style={{ color: "#6b7280" }}>Loading assessment findings...</p>
+      </main>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
+        <h1>Quality Gate</h1>
+        <div style={{ border: "1px solid #fca5a5", background: "#fee2e2", borderRadius: 8, padding: 24 }}>
+          <h2 style={{ marginTop: 0, color: "#991b1b" }}>Failed to load findings</h2>
+          <p style={{ color: "#dc2626" }}>{fetchError}</p>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>

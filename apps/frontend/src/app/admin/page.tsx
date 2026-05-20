@@ -21,7 +21,7 @@ export default function AdminPage() {
         console.log("Admin page: Fetching from", API_BASE)
 
         const [contactsRes, campaignsRes] = await Promise.all([
-          fetch(`${API_BASE}/contacts?limit=1`),
+          fetch(`${API_BASE}/contacts?limit=1000`),
           fetch(`${API_BASE}/campaigns/scheduled`),
         ])
 
