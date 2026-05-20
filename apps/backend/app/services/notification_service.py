@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 import json
@@ -32,6 +33,24 @@ def send_notification(
     notifications = _load_notifications()
     notification_id = f"NOTIF-{uuid4().hex[:8].upper()}"
     now = datetime.now(UTC).isoformat()
+
+    delivery_status = "sent"
+
+    if recipient:
+        async def _do_send():
+            from app.services.email_service import email_service
+            result = await email_service.send_email(
+                to_email=recipient,
+                subject=title,
+                html_content=f"<p>{message}</p>",
+            )
+            return result.get("status", "error")
+        try:
+            status = asyncio.run(_do_send())
+            delivery_status = status if status in ("sent", "mock") else "failed"
+        except Exception:
+            delivery_status = "failed"
+
     notifications[notification_id] = {
         "notification_id": notification_id,
         "type": type,
@@ -39,7 +58,7 @@ def send_notification(
         "message": message,
         "campaign_id": campaign_id,
         "recipient": recipient,
-        "status": "sent",
+        "status": delivery_status,
         "sent_at": now,
     }
     _save_notifications(notifications)

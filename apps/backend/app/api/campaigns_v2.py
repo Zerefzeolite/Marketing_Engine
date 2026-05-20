@@ -363,11 +363,13 @@ def execute_campaign_by_session(session_id: str) -> dict:
 
     stats = execution_service.dispatch_campaign(session_id, session, contact_ids)
 
+    recipient_email = session.get("client_email")
     execution_service.complete_execution(
         execution_id=exec_record["execution_id"],
         contacts_attempted=len(contact_ids),
         contacts_delivered=stats["contacts_delivered"],
         errors=stats["errors"],
+        recipient=recipient_email,
     )
 
     return {

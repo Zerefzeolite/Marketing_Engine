@@ -128,11 +128,13 @@ def execute_due_campaigns() -> list[dict]:
                 contact_ids=contact_ids,
             )
 
+            recipient_email = session.get("client_email")
             execution_service.complete_execution(
                 execution_id=exec_record["execution_id"],
                 contacts_attempted=len(contact_ids),
                 contacts_delivered=stats["contacts_delivered"],
                 errors=stats["errors"],
+                recipient=recipient_email,
             )
             mark_completed(campaign_id)
             results.append({

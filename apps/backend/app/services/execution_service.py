@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 import json
@@ -146,6 +147,7 @@ def complete_execution(
     contacts_attempted: int,
     contacts_delivered: int,
     errors: list[str],
+    recipient: str | None = None,
 ) -> dict:
     executions = _load_json(EXECUTIONS_FILE)
     
@@ -161,6 +163,27 @@ def complete_execution(
     
     executions[execution_id] = execution
     _save_json(EXECUTIONS_FILE, executions)
+
+    from app.services import notification_service
+    if errors:
+        notification_service.on_campaign_failed(
+            campaign_id=execution.get("campaign_id", "unknown"),
+            error=errors[0],
+        )
+    else:
+        notification_service.on_campaign_completed(
+            campaign_id=execution.get("campaign_id", "unknown"),
+            success_count=contacts_delivered,
+            error_count=len(errors),
+        )
+
+    if recipient:
+        notification_service.send_notification(
+            type="execution_report",
+            title="Campaign Execution Report",
+            message=f"Campaign completed. {contacts_delivered}/{contacts_attempted} delivered.",
+            recipient=recipient,
+        )
     
     return execution
 
