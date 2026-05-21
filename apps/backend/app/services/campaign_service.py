@@ -177,13 +177,88 @@ def generate_template(
     }
 
 
+import random
+
+_EMAIL_TEMPLATES: dict[str, str] = {
+    "professional": """Dear {name},
+
+We are pleased to announce our latest campaign tailored to your needs. At Marketing Engine, we understand what matters most to our clients.
+
+{body}
+
+Thank you for your continued trust.
+
+Warm regards,
+The Marketing Engine Team""",
+    "casual": """Hey {name},
+
+Great news! We have something special lined up just for you. Check out what we've been working on — we think you'll love it.
+
+{body}
+
+Cheers,
+The Marketing Engine Team""",
+    "promotional": """🔥 Exclusive Offer Just for You, {name}!
+
+Don't miss out on this limited-time opportunity. Our latest campaign is packed with value designed to help you grow.
+
+{body}
+
+Act now — spots are filling fast!
+
+The Marketing Engine Team""",
+    "default": """Hi {name},
+
+We're reaching out to share our latest campaign updates. We've put together something special and wanted you to be the first to know.
+
+{body}
+
+Best regards,
+Marketing Engine""",
+}
+
+_SMS_TEMPLATES: dict[str, str] = {
+    "professional": "{name}, your campaign update is ready. Check your email for full details. - Marketing Engine",
+    "casual": "Hey {name}! Got a minute? We've got something cool to share with you. Check it out! - ME",
+    "promotional": "🔥 {name}, exclusive offer inside! Don't miss out. Reply HELP for info. - Marketing Engine",
+    "default": "{name}, your campaign update is here. Visit our portal for details. - Marketing Engine",
+}
+
+_SOCIAL_TEMPLATES: dict[str, str] = {
+    "professional": "We're excited to launch our new campaign! {body} #MarketingEngine #CampaignLaunch",
+    "casual": "Something awesome is coming your way! 🎉 Stay tuned for updates. #NewCampaign",
+    "promotional": "Don't miss our latest campaign! Exclusive insights and strategies inside. {body} #Marketing #Growth",
+    "default": "New campaign update from Marketing Engine. Check it out! #Marketing #Campaign",
+}
+
+_BODY_SNIPPETS = [
+    "Our team has curated the best strategies to help you reach your goals this quarter.",
+    "This campaign focuses on delivering measurable results with targeted outreach.",
+    "We've analyzed market trends to bring you content that resonates with your audience.",
+    "Our data-driven approach ensures every message reaches the right person at the right time.",
+    "This release includes new features designed to maximize your campaign performance.",
+    "We're committed to helping you connect with your audience more effectively.",
+]
+
+
 def _generate_template_content(template_type: str, style_preference: str) -> str:
-    templates = {
-        "email": "Dear valued customer,\n\nWe are excited to share our latest offerings with you...\n\nBest regards",
-        "sms": "Your exclusive offer awaits! Visit us today for special deals.",
-        "social": "Check out our latest campaign! #SpecialOffer #ExclusiveDeal",
-    }
-    return templates.get(template_type, "Template content placeholder")
+    style = style_preference.lower().strip() if style_preference else "default"
+    if style not in ("professional", "casual", "promotional"):
+        style = "default"
+
+    body = random.choice(_BODY_SNIPPETS)
+
+    if template_type == "email":
+        tpl = _EMAIL_TEMPLATES.get(style, _EMAIL_TEMPLATES["default"])
+        return tpl.format(name="{{name}}", body=body)
+    elif template_type == "sms":
+        tpl = _SMS_TEMPLATES.get(style, _SMS_TEMPLATES["default"])
+        return tpl.format(name="{{name}}")
+    elif template_type == "social":
+        tpl = _SOCIAL_TEMPLATES.get(style, _SOCIAL_TEMPLATES["default"])
+        return tpl.format(body=body)
+
+    return "Template content placeholder"
 
 
 def resume_session(campaign_session_id: str, resume_method: str) -> dict:
